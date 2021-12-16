@@ -304,11 +304,11 @@ impl Viewport {
     }
 
     pub fn gl_get_x(&self, x: f32) -> f32 {
-        (-(x / self.width as f32) - 0.5f32) * 2f32
+        ((x / self.width as f32) * 2f32)  - 1f32
     }
 
     pub fn gl_get_y(&self, y: f32) -> f32 {
-        (-(y / self.height as f32) - 0.5f32) * 2f32
+        ((y / self.height as f32) * 2f32) - 1f32
     }
 
     pub fn get_width(&self) -> u32 {

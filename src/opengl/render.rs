@@ -5,8 +5,8 @@ use std::time::Instant;
 
 use glfw::{Glfw, Window};
 
-use crate::{attach_shader, BufferUsage, Chunk, compile_shader, create_shader, DataType, delete_program, detach_shader, draw_arrays, draw_arrays_instanced, FRAGMENT_SHADER, gl, GLchar, GLenum, gll, GLsizei, GLuint, link_program, Program, read_asset_string, shader_source, Tile, TRIANGLES, Uniform, VERTEX_SHADER, VertexAttribute, VertexBuffer, VertexDivisor, VertexLayout};
-use crate::hlgl::{VertexBuilder, Viewport};
+use crate::{BufferUsage, Chunk, DataType, gl, read_asset_string, VertexDivisor};
+use crate::opengl::hlgl::{Program, Uniform, VertexBuilder, VertexLayout, Viewport};
 use crate::player::{Player, PlayerPos};
 
 pub struct FpsCounter {
@@ -95,7 +95,7 @@ impl BakedChunk {
     pub fn draw(&self) {
         self.layout.bind();
         for i in 0..(8 * 8) {
-            draw_arrays(TRIANGLES, ((6 * i) as i32), 6);
+            gl::draw_arrays(gl::TRIANGLES, ((6 * i) as i32), 6);
         }
         self.layout.unbind();
     }
@@ -114,11 +114,11 @@ impl PlayerRenderer {
         );
 
         let mut pos_vb = VertexBuilder::new(viewport);
-        let width = 2f32;
-        let height = 3f32;
-        let x = (viewport.get_width() as f32 / 2f32) + (width / 2f32);
-        let y = (viewport.get_height() as f32 / 2f32) + (height / 2f32);
-        pos_vb.quad(x * scale as f32, y * scale as f32, width * scale as f32, height * scale as f32);
+        let width = 2f32 * scale as f32;
+        let height = 3f32 * scale as f32;
+        let x = (viewport.get_width() as f32 / 2f32) - (width / 2f32);
+        let y = (viewport.get_height() as f32 / 2f32) - (height / 2f32);
+        pos_vb.quad(x , y , width, height);
 
         pos_vb.pos_x(3f32);
         let mut layout = VertexLayout::new(1);
@@ -133,7 +133,7 @@ impl PlayerRenderer {
     pub fn draw(&self) {
         self.program.bind();
         self.layout.bind();
-        draw_arrays(TRIANGLES, 0, 6);
+        gl::draw_arrays(gl::TRIANGLES, 0, 6);
         self.layout.unbind();
         self.program.unbind();
     }

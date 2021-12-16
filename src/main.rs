@@ -10,17 +10,18 @@ use glfw::{Action, Context, Key, SwapInterval, WindowEvent};
 use gl::*;
 use gll::types::*;
 
-use crate::gll::VERTEX_SHADER;
-use crate::hlgl::{Program, Uniform, VertexAttribute, VertexBuffer, VertexLayout, Viewport};
+use crate::gll::{COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, VERTEX_SHADER};
+use crate::opengl::gl;
+use crate::opengl::gl::clear_color;
+use crate::opengl::hlgl::Viewport;
+use crate::opengl::render::{FpsCounter, PlayerRenderer, TileRenderer};
 use crate::player::{Controller, Player, PlayerPos};
 use crate::registry::{Chunk, Identifier, Tile};
-use crate::render::{FpsCounter, PlayerRenderer, TileRenderer};
 
 mod registry;
-mod gl;
-mod render;
+mod opengl;
 mod player;
-mod hlgl;
+mod tile_render;
 
 mod gll {
     include!("C:\\Program Files (x86)\\inkscape\\gl-rs-bindings\\bindings.rs");
@@ -84,7 +85,7 @@ fn main() {
     let mut fps_counter = FpsCounter::new();
 
     println!("Finishing");
-    clear_color(0.5f32, 0.6f32, 0.98f32, 1f32);
+    gl::clear_color(0.5f32, 0.6f32, 0.98f32, 1f32);
     gl::viewport(0, 0, 900, 600);
 
     let mut player = Player {

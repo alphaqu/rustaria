@@ -1439,9 +1439,9 @@ pub fn vertex_attrib_pointer(index: u32, size: i32, data: &DataType, normalized:
 
 // glVertexAttribDivisor
 pub enum VertexDivisor {
-    Vertex ,
-    Instance ,
-    Instance2 ,
+    Vertex,
+    Instance,
+    Instance2,
 }
 
 impl VertexDivisor {
