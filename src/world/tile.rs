@@ -1,4 +1,4 @@
-use crate::registry::{RenderType, TileId};
+use crate::registry::{TileId};
 use crate::world::tick::{Tickable, TickResult};
 
 #[derive(Copy, Clone)]

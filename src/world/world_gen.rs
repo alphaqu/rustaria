@@ -1,4 +1,4 @@
-use crate::world::world::{Chunk, ChunkPos};
+use crate::world::{Chunk, ChunkPos};
 
 pub struct ChunkGenerator {}
 
