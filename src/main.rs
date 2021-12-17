@@ -19,9 +19,8 @@ use crate::player::{Controller, Player, PlayerPos};
 use crate::registry::{Chunk, Identifier, Tile};
 
 mod registry;
-mod opengl;
 mod player;
-mod tile_render;
+mod world;
 
 mod gll {
     include!("C:\\Program Files (x86)\\inkscape\\gl-rs-bindings\\bindings.rs");
