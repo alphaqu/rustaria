@@ -1,25 +1,28 @@
-const GRAVITY: f32 = 0.2;
+use crate::settings::Settings;
 
-// player position
-pub struct PlayerPos {
-    x: f32,
-    y: f32,
-}
+const GRAVITY: f32 = 0.2;
+const BASE_SPEED: f32 = 1f32;
 
 pub struct Player {
-    pub pos: PlayerPos,
     pub speed: f32,
-    pub velocity_x: f32,
-    pub velocity_y: f32,
-    pub controller: Controller,
+    pub pos_x: f32,
+    pub pos_y: f32,
+    pub vel_x: f32,
+    pub vel_y: f32,
 }
 
 impl Player {
-    pub fn tick(&mut self) {
-        self.velocity_x = self.controller.get_x_vel(self.speed / 60f32);
-        self.velocity_y = self.controller.get_y_vel(self.speed / 60f32);
+    pub fn new() -> Player {
+        Self {
+            speed: BASE_SPEED,
+            pos_x: 0.0,
+            pos_y: 0.0,
+            vel_x: 0.0,
+            vel_y: 0.0
+        }
+    }
 
-        self.pos.x = self.pos.x + self.velocity_x;
-        self.pos.y = self.pos.y + self.velocity_y;
+    pub fn tick(&mut self) {
+
     }
 }

@@ -1,4 +1,4 @@
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum RenderType {
     /// Does not render things behind. Transparency is off
     Solid,
@@ -8,14 +8,14 @@ pub enum RenderType {
     Transparent,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct TileId {
-    id: u32,
+    pub id: u32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct WallId {
-    id: u32,
+    pub id: u32,
 }
 
 pub struct Fluid {}

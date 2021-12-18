@@ -1,10 +1,7 @@
-pub enum TickResult {
-    Continue,
-    Stop,
-}
+use crate::util::CallbackResponse;
 
 pub trait Tickable {
-    fn tick(&self) -> TickResult;
+    fn tick(&self) -> CallbackResponse;
 }
 
 pub struct TickHandler<'a> {
@@ -12,10 +9,16 @@ pub struct TickHandler<'a> {
 }
 
 impl<'a> TickHandler<'a> {
+    pub fn new() -> TickHandler<'a> {
+        Self {
+            data: Vec::new()
+        }
+    }
+
     pub fn tick(&mut self) {
         self.data.retain(|tickable| match tickable.tick() {
-            TickResult::Continue => true,
-            TickResult::Stop => false,
+            CallbackResponse::Continue => true,
+            CallbackResponse::Stop => false,
         });
     }
 

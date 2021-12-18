@@ -1,153 +1,122 @@
 extern crate glfw;
 
-use std::fs::File;
+use std::collections::BTreeMap;
+use std::fs::{File, read_dir};
 use std::io::Read;
-use std::thread;
-use std::time::Duration;
+use std::path::Path;
 
-use glfw::{Action, Context, Key, SwapInterval, WindowEvent};
+use image::{DynamicImage, GenericImage, GenericImageView};
+use rectangle_pack::{contains_smallest_box, GroupedRectsToPlace, pack_rects, RectToInsert, TargetBin, volume_heuristic};
 
-use gl::*;
-use gll::types::*;
+use crate::player::Player;
+use crate::settings::Settings;
 
-use crate::gll::{COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, VERTEX_SHADER};
-use crate::opengl::gl;
-use crate::opengl::gl::clear_color;
-use crate::opengl::hlgl::Viewport;
-use crate::opengl::render::{FpsCounter, PlayerRenderer, TileRenderer};
-use crate::player::{Controller, Player, PlayerPos};
-use crate::registry::{Chunk, Identifier, Tile};
-
-mod registry;
-mod player;
-mod world;
+pub mod registry;
+pub mod player;
+pub mod world;
+pub mod client;
+pub mod settings;
+mod util;
 
 mod gll {
     include!("C:\\Program Files (x86)\\inkscape\\gl-rs-bindings\\bindings.rs");
 }
 
 fn main() {
-    println!("Generating World");
+    run_rustaria()
+}
 
-    let i = Tile { id: Identifier { id: 0 } };
-    let d = Tile { id: Identifier { id: 1 } };
+// A rectangle ID just needs to meet these trait bounds (ideally also Copy).
+// So you could use a String, PathBuf, or any other type that meets these
+// trat bounds. You do not have to use a custom enum.
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Ord, PartialOrd)]
+struct ImageId {
+    id: u32,
+}
 
-    let chunk2 = Chunk::parse_debug(4, 1,
-                                    [
-                                        [0, 0, 0, 0, 0, 0, 0, 0],
-                                        [0, 0, 0, 1, 1, 0, 0, 0],
-                                        [0, 0, 1, 1, 1, 1, 0, 0],
-                                        [0, 0, 0, 1, 1, 0, 0, 0],
-                                        [0, 0, 0, 1, 1, 0, 0, 0],
-                                        [0, 0, 0, 1, 1, 0, 0, 0],
-                                        [0, 0, 0, 1, 1, 0, 0, 0],
-                                        [0, 0, 0, 1, 1, 0, 0, 0],
-                                    ]);
-    let chunk = Chunk::parse_debug(4, 0,
-                                   [
-                                       [0, 0, 0, 1, 1, 0, 0, 0],
-                                       [0, 0, 0, 1, 1, 0, 0, 0],
-                                       [0, 0, 0, 1, 1, 0, 0, 0],
-                                       [0, 0, 0, 1, 1, 0, 0, 0],
-                                       [0, 1, 1, 1, 1, 1, 1, 0],
-                                       [0, 1, 1, 1, 1, 1, 1, 0],
-                                       [0, 1, 1, 1, 1, 1, 1, 0],
-                                       [0, 1, 1, 1, 1, 1, 1, 0],
-                                   ]);
+// A target bin ID just needs to meet these trait bounds (ideally also Copy)
+// So you could use a u32, &str, or any other type that meets these
+// trat bounds. You do not have to use a custom enum.
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Ord, PartialOrd)]
+enum MyCustomBinId {
+    DestinationBinOne,
+    DestinationBinTwo,
+}
 
-
-    println!("Launching GLFW");
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-
-    println!("Launching Window");
-    let (mut window, events) = glfw
-        .create_window(900, 600, "Hello this is window", glfw::WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
-
-    window.set_key_polling(true);
-    window.set_size_polling(true);
-    window.make_current();
+// A placement group just needs to meet these trait bounds (ideally also Copy).
+//
+// Groups allow you to ensure that a set of rectangles will be placed
+// into the same bin. If this isn't possible an error is returned.
+//
+// Groups are optional.
+//
+// You could use an i32, &'static str, or any other type that meets these
+// trat bounds. You do not have to use a custom enum.
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Ord, PartialOrd)]
+enum MyCustomGroupId {
+    GroupIdOne
+}
 
 
-    println!("Setting GL Context");
-    gll::load_with(|s| glfw.get_proc_address_raw(s));
-    gll::Viewport::load_with(|s| glfw.get_proc_address_raw(s));
+fn atlas_stitching<'a>() {
+    let path = Path::new("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\assets\\sprite\\tile");
 
-    println!("Preparing Graphical Backend");
+    println!("Reading images");
+    let mut images = Vec::new();
+    for entry in read_dir(path).unwrap() {
+        let dir = entry.unwrap();
+        let result = image::open(dir.path()).unwrap();
+        images.push(result)
+    }
 
-    glfw.set_swap_interval(SwapInterval::Sync(1));
-    let mut viewport = Viewport::new(900, 600);
-    let mut tile_renderer = TileRenderer::new();
-    let mut player_renderer = PlayerRenderer::new(&viewport, 8);
-
-
-    let mut fps_counter = FpsCounter::new();
-
-    println!("Finishing");
-    gl::clear_color(0.5f32, 0.6f32, 0.98f32, 1f32);
-    gl::viewport(0, 0, 900, 600);
-
-    let mut player = Player {
-        pos: PlayerPos { x: 0.0, y: 0.0 },
-        speed: 11.36f32,
-        velocity_x: 0.0,
-        velocity_y: 0.0,
-        controller: Controller {
-            w: false,
-            a: false,
-            s: false,
-            d: false,
-        },
-    };
+    println!("Stitching {} images", images.len());
+    let mut rects_to_place = GroupedRectsToPlace::new();
+    for id in 0..images.len() {
+        let image = &images[id];
+        rects_to_place.push_rect(
+            ImageId { id: id as u32 },
+            Some(vec![MyCustomGroupId::GroupIdOne]),
+            RectToInsert::new(image.width(), image.height(), 1),
+        );
+    }
 
 
-    tile_renderer.add_chunk(&chunk, &player, &viewport, 8);
-    tile_renderer.add_chunk(&chunk2, &player, &viewport, 8);
+    let mut target_bins = BTreeMap::new();
+    let i = 1024;
+    target_bins.insert(1, TargetBin::new(i, i, 1));
 
-    while !window.should_close() {
-        fps_counter.tick();
+    let rectangle_placements = pack_rects(
+        &rects_to_place,
+        &mut target_bins,
+        &volume_heuristic,
+        &contains_smallest_box,
+    ).unwrap();
 
-        clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
-        tile_renderer.draw(&player);
-        player_renderer.draw();
-
-        window.swap_buffers();
-
-        glfw.poll_events();
-
-        let mut resize = false;
-        let mut resize_width = 0;
-        let mut resize_height = 0;
-
-        let mut controller = &mut player.controller;
-        for (_, event) in glfw::flush_messages(&events) {
-            match event {
-                WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    window.set_should_close(true)
-                }
-                WindowEvent::Key(Key::W, _, Action::Press, _) => controller.w = true,
-                WindowEvent::Key(Key::W, _, Action::Release, _) => controller.w = false,
-                WindowEvent::Key(Key::A, _, Action::Press, _) => controller.a = true,
-                WindowEvent::Key(Key::A, _, Action::Release, _) => controller.a = false,
-                WindowEvent::Key(Key::S, _, Action::Press, _) => controller.s = true,
-                WindowEvent::Key(Key::S, _, Action::Release, _) => controller.s = false,
-                WindowEvent::Key(Key::D, _, Action::Press, _) => controller.d = true,
-                WindowEvent::Key(Key::D, _, Action::Release, _) => controller.d = false,
-                WindowEvent::Size(width, height) => {
-                    resize = true;
-                    resize_width = width;
-                    resize_height = height;
-                }
-                _ => {}
+    println!("Exporting {} images", images.len());
+    let mut out = DynamicImage::new_rgba8(i, i);
+    let locations = rectangle_placements.packed_locations();
+    for (image_id, (bin_id, location)) in locations {
+        let image = images.get(image_id.id as usize).unwrap();
+        for y in 0..location.height() {
+            for x in 0..location.width() {
+                out.put_pixel(location.x() + x, location.y() + y, image.get_pixel(x, y));
             }
         }
+    }
 
-        player.tick();
-        if resize {
-            viewport.resize(resize_width, resize_height);
-            tile_renderer.set_tile_viewport(&viewport, 24);
-        }
+    out.save("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\assets\\sprite\\tile\\atlas.png");
+}
+
+fn run_rustaria() {
+    let mut player = Player::new();
+    let mut settings = Settings::new();
+    let mut world = world::World::new();
+    let mut client = client::ClientHandler::launch(&mut world, &player, &settings);
+    loop {
+        client.tick(&mut world, &mut player, &mut settings);
+        world.tick();
+        client.draw(&mut world, &mut player, &mut settings);
     }
 }
 

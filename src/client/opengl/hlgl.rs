@@ -1,9 +1,16 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::collections::{BTreeMap, HashMap};
 use std::ops::Index;
 
-use crate::{BufferTarget, BufferType, BufferUsage, DataType, gl, GLenum, GLint, GLuint, VertexDivisor};
+use image::{DynamicImage, GenericImageView};
+use rectangle_pack::{contains_smallest_box, GroupedRectsToPlace, pack_rects, RectToInsert, TargetBin, volume_heuristic};
+
+use crate::client::opengl::gl;
+use crate::client::opengl::gl::{BufferTarget, BufferType, BufferUsage, DataType, VertexDivisor};
+use crate::gll::types::{GLenum, GLuint};
+use crate::registry::TileId;
 
 pub struct Program {
     program_id: GLuint,
@@ -163,10 +170,10 @@ pub struct VertexLayout {
 }
 
 impl VertexLayout {
-    pub fn new(size: usize) -> VertexLayout {
+    pub fn new(buffers: usize) -> VertexLayout {
         let id = gl::gen_vertex_arrays();
 
-        Self { id, vertex_buffers: Vec::with_capacity(size) }
+        Self { id, vertex_buffers: Vec::with_capacity(buffers) }
     }
 
     pub fn add_vbo<T>(&mut self, index: u32, data: Vec<T>, amount: i32, usage: BufferUsage, data_type: DataType, instance: VertexDivisor) {
@@ -210,51 +217,6 @@ impl Drop for VertexLayout {
     }
 }
 
-pub struct VertexBuilder<'a> {
-    data: Vec<f32>,
-    viewport: &'a Viewport,
-}
-
-impl<'a> VertexBuilder<'a> {
-    pub fn new(viewport: &Viewport) -> VertexBuilder {
-        VertexBuilder { data: Vec::new(), viewport }
-    }
-
-    pub fn quad(&mut self, x: f32, y: f32, width: f32, height: f32) {
-        self.pos_2d(x, y + height);
-        self.pos_2d(x, y);
-        self.pos_2d(x + width, y + height);
-        self.pos_2d(x + width, y + height);
-        self.pos_2d(x, y);
-        self.pos_2d(x + width, y);
-    }
-
-    pub fn pos_2d(&mut self, x: f32, y: f32) {
-        self.pos_x(x);
-        self.pos_y(y);
-    }
-
-    pub fn pos_x(&mut self, x: f32) {
-        self.add(self.viewport.gl_get_x(x));
-    }
-
-    pub fn pos_y(&mut self, y: f32) {
-        self.add(self.viewport.gl_get_y(y));
-    }
-
-    pub fn add(&mut self, value: f32) {
-        self.data.push(value);
-    }
-
-    pub fn size(&self) -> u32 {
-        self.data.len() as u32
-    }
-
-    pub fn export(self) -> Vec<f32> {
-        self.data
-    }
-}
-
 pub struct VertexBuffer {
     id: GLuint,
     amount: i32,
@@ -287,35 +249,118 @@ impl Drop for VertexBuffer {
     }
 }
 
-pub struct Viewport {
-    width: i32,
-    height: i32,
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Ord, PartialOrd)]
+pub enum AtlasGroup {
+    Tiles
 }
 
-impl Viewport {
-    pub fn new(width: i32, height: i32) -> Viewport {
-        Viewport { width, height }
+pub struct Image {
+    pub width: u32,
+    pub height: u32,
+    pub data: Vec<u8>,
+}
+
+pub struct Atlas {
+    id: GLuint,
+    images: HashMap<u32, AtlasImage>,
+}
+
+impl Atlas {
+    pub fn get_image(&self, id: TileId) -> &AtlasImage {
+        self.images.get(&id.id).expect("Could not find image")
     }
 
-    pub fn resize(&mut self, width: i32, height: i32) {
-        gl::viewport(0, 0, width, height);
-        self.width = width;
-        self.height = height;
+    pub fn create(data: HashMap<u32, Image>, atlas_width: u32, atlas_height: u32, group: AtlasGroup) -> Atlas {
+        println!("Stitching {} images", data.len());
+        let mut rects_to_place = GroupedRectsToPlace::new();
+        for (id, image) in &data {
+            rects_to_place.push_rect(
+                TileId { id: *id },
+                Some(vec![group.clone()]),
+                RectToInsert::new(image.width, image.height, 1),
+            );
+        }
+
+
+        let mut target_bins = BTreeMap::new();
+        target_bins.insert(1, TargetBin::new(atlas_width, atlas_height, 1));
+
+        let rectangle_placements = pack_rects(
+            &rects_to_place,
+            &mut target_bins,
+            &volume_heuristic,
+            &contains_smallest_box,
+        ).unwrap();
+
+
+        println!("Allocating {} images", &data.len());
+        let id = gl::gen_texture();
+
+        let mipmaps = 3;
+
+        gl::bind_texture(gl::TEXTURE_2D, id);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_MAX_LOD, mipmaps);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_MIN_LOD, 0);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_MAX_LEVEL, mipmaps);
+        gl::tex_parameter_f(gl::TEXTURE_2D, gl::TEXTURE_LOD_BIAS, 0.2f32);
+
+        for i in 0..(mipmaps + 1) {
+            gl::tex_image_2d(gl::TEXTURE_2D, i as i32, gl::RGBA, atlas_width >> i, atlas_height >> i, 0, gl::RGBA, gl::UNSIGNED_BYTE, Option::None);
+        }
+
+        let mut images: HashMap<u32, AtlasImage> = HashMap::new();
+        let locations = rectangle_placements.packed_locations();
+        for (image_id, (bin_id, location)) in locations {
+            let id = &image_id.id;
+            let image = data.get(id).unwrap();
+            let x = location.x();
+            let y = location.y();
+            let width = location.width();
+            let height = location.height();
+
+            for i in 0..(mipmaps + 1) {
+                Self::upload_sub_image(&image, i, x >> i, y >> i, 0, 0, width >> i, height >> i);
+            }
+
+            // TODO make images 1 off so i dont need to have this offset
+            images.insert(*(id), AtlasImage {
+                x: Self::gl_pos(atlas_width, x as f32),
+                y: Self::gl_pos(atlas_height, y as f32),
+                width: Self::gl_pos(atlas_width, width as f32),
+                height: Self::gl_pos(atlas_height, height as f32 - 0.1f32),
+            });
+        };
+        Self {
+            id,
+            images,
+        }
     }
 
-    pub fn gl_get_x(&self, x: f32) -> f32 {
-        ((x / self.width as f32) * 2f32)  - 1f32
+    fn upload_sub_image(image: &Image, level: u32, offset_x: u32, offset_y: u32, unpack_skip_pixels: u32, unpack_skip_rows: u32, width: u32, height: u32) {
+        gl::pixel_store_i(gl::UNPACK_ROW_LENGTH, width << level);
+        gl::pixel_store_i(gl::UNPACK_SKIP_PIXELS, unpack_skip_pixels);
+        gl::pixel_store_i(gl::UNPACK_SKIP_ROWS, unpack_skip_rows);
+        gl::pixel_store_i(gl::UNPACK_ALIGNMENT, 1);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S,     gl::CLAMP_TO_EDGE);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T,     gl::CLAMP_TO_EDGE);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_LINEAR);
+        gl::tex_parameter_i(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST);
+        gl::tex_sub_image_2d(gl::TEXTURE_2D, level as i32, offset_x, offset_y, width, height, gl::RGBA, gl::UNSIGNED_BYTE, &image.data);
     }
 
-    pub fn gl_get_y(&self, y: f32) -> f32 {
-        ((y / self.height as f32) * 2f32) - 1f32
+    pub fn bind(&self) {
+        gl::active_texture(gl::TEXTURE0);
+        gl::bind_texture(gl::TEXTURE_2D, self.id);
     }
 
-    pub fn get_width(&self) -> u32 {
-        self.width as u32
+    fn gl_pos(size: u32, pos: f32) -> f32 {
+        pos as f32 / size as f32
     }
+}
 
-    pub fn get_height(&self) -> u32 {
-        self.height as u32
-    }
+pub struct AtlasImage {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
 }

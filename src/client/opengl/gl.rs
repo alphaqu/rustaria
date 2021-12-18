@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::ffi::{CStr, CString};
+use std::ffi::{c_void, CStr, CString};
+use std::ptr;
 
-use crate::{GLboolean, GLenum, GLint, gll, GLsizei, GLsizeiptr, GLuint};
-use crate::gll::{AttachShader, Clear, ClearColor, CompileShader, CreateShader, DetachShader, GetShaderiv, LinkProgram, ShaderSource, types};
+use crate::gll;
+use crate::gll::{CompileShader, GetShaderiv};
+use crate::gll::types::{GLboolean, GLenum, GLint, GLsizei, GLuint, GLuint64};
 
 pub const ACTIVE_ATOMIC_COUNTER_BUFFERS: u32 = 0x92D9;
 pub const ACTIVE_ATTRIBUTES: u32 = 0x8B89;
@@ -317,7 +319,7 @@ pub const ELEMENT_ARRAY_BUFFER_BINDING: u32 = 0x8895;
 pub const EQUAL: u32 = 0x0202;
 pub const EQUIV: u32 = 0x1509;
 pub const EXTENSIONS: u32 = 0x1F03;
-pub const FALSE: types::GLboolean = 0;
+pub const FALSE: GLboolean = 0;
 pub const FASTEST: u32 = 0x1101;
 pub const FILL: u32 = 0x1B02;
 pub const FILTER: u32 = 0x829A;
@@ -497,7 +499,7 @@ pub const INT_VEC3: u32 = 0x8B54;
 pub const INT_VEC4: u32 = 0x8B55;
 pub const INVALID_ENUM: u32 = 0x0500;
 pub const INVALID_FRAMEBUFFER_OPERATION: u32 = 0x0506;
-pub const INVALID_INDEX: types::GLuint = 0xFFFFFFFF;
+pub const INVALID_INDEX: GLuint = 0xFFFFFFFF;
 pub const INVALID_OPERATION: u32 = 0x0502;
 pub const INVALID_VALUE: u32 = 0x0501;
 pub const INVERT: u32 = 0x150A;
@@ -1057,6 +1059,14 @@ pub const TESS_GEN_VERTEX_ORDER: u32 = 0x8E78;
 pub const TEXTURE: u32 = 0x1702;
 pub const TEXTURE0: u32 = 0x84C0;
 pub const TEXTURE1: u32 = 0x84C1;
+pub const TEXTURE2: u32 = 0x84C2;
+pub const TEXTURE3: u32 = 0x84C3;
+pub const TEXTURE4: u32 = 0x84C4;
+pub const TEXTURE5: u32 = 0x84C5;
+pub const TEXTURE6: u32 = 0x84C6;
+pub const TEXTURE7: u32 = 0x84C7;
+pub const TEXTURE8: u32 = 0x84C8;
+pub const TEXTURE9: u32 = 0x84C9;
 pub const TEXTURE10: u32 = 0x84CA;
 pub const TEXTURE11: u32 = 0x84CB;
 pub const TEXTURE12: u32 = 0x84CC;
@@ -1067,7 +1077,6 @@ pub const TEXTURE16: u32 = 0x84D0;
 pub const TEXTURE17: u32 = 0x84D1;
 pub const TEXTURE18: u32 = 0x84D2;
 pub const TEXTURE19: u32 = 0x84D3;
-pub const TEXTURE2: u32 = 0x84C2;
 pub const TEXTURE20: u32 = 0x84D4;
 pub const TEXTURE21: u32 = 0x84D5;
 pub const TEXTURE22: u32 = 0x84D6;
@@ -1078,15 +1087,8 @@ pub const TEXTURE26: u32 = 0x84DA;
 pub const TEXTURE27: u32 = 0x84DB;
 pub const TEXTURE28: u32 = 0x84DC;
 pub const TEXTURE29: u32 = 0x84DD;
-pub const TEXTURE3: u32 = 0x84C3;
 pub const TEXTURE30: u32 = 0x84DE;
 pub const TEXTURE31: u32 = 0x84DF;
-pub const TEXTURE4: u32 = 0x84C4;
-pub const TEXTURE5: u32 = 0x84C5;
-pub const TEXTURE6: u32 = 0x84C6;
-pub const TEXTURE7: u32 = 0x84C7;
-pub const TEXTURE8: u32 = 0x84C8;
-pub const TEXTURE9: u32 = 0x84C9;
 pub const TEXTURE_1D: u32 = 0x0DE0;
 pub const TEXTURE_1D_ARRAY: u32 = 0x8C18;
 pub const TEXTURE_2D: u32 = 0x0DE1;
@@ -1179,7 +1181,7 @@ pub const TEXTURE_WRAP_R: u32 = 0x8072;
 pub const TEXTURE_WRAP_S: u32 = 0x2802;
 pub const TEXTURE_WRAP_T: u32 = 0x2803;
 pub const TIMEOUT_EXPIRED: u32 = 0x911B;
-pub const TIMEOUT_IGNORED: types::GLuint64 = 0xFFFFFFFFFFFFFFFF;
+pub const TIMEOUT_IGNORED: GLuint64 = 0xFFFFFFFFFFFFFFFF;
 pub const TIMESTAMP: u32 = 0x8E28;
 pub const TIME_ELAPSED: u32 = 0x88BF;
 pub const TOP_LEVEL_ARRAY_SIZE: u32 = 0x930C;
@@ -1207,7 +1209,7 @@ pub const TRIANGLES_ADJACENCY: u32 = 0x000C;
 pub const TRIANGLE_FAN: u32 = 0x0006;
 pub const TRIANGLE_STRIP: u32 = 0x0005;
 pub const TRIANGLE_STRIP_ADJACENCY: u32 = 0x000D;
-pub const TRUE: types::GLboolean = 1;
+pub const TRUE: GLboolean = 1;
 pub const TYPE: u32 = 0x92FA;
 pub const UNDEFINED_VERTEX: u32 = 0x8260;
 pub const UNIFORM: u32 = 0x92E1;
@@ -1354,15 +1356,19 @@ pub const ZERO: u32 = 0;
 pub const ZERO_TO_ONE: u32 = 0x935F;
 
 pub fn clear_color(red: f32, green: f32, blue: f32, alpha: f32) {
-    unsafe { ClearColor(red, green, blue, alpha); }
+    unsafe { gll::ClearColor(red, green, blue, alpha); }
 }
 
 pub fn clear(bits: u32) {
-    unsafe { Clear(bits); }
+    unsafe { gll::Clear(bits); }
 }
 
 pub fn viewport(x: i32, y: i32, width: i32, height: i32) {
     unsafe { gll::Viewport(x, y, width, height); }
+}
+
+pub fn enable(option: GLenum) {
+    unsafe { gll::Enable(option); }
 }
 
 pub fn gen_vertex_arrays() -> GLuint {
@@ -1679,6 +1685,22 @@ pub enum BufferUsage {
     DynamicCopy,
 }
 
+//     --red: #ff6188;
+//     --orange: #fc9867;
+//     --yellow: #ffd866;
+//     --green: #a9dc76;
+//     --blue: #78dce8;
+//     --purple: #ab9df2;
+//     --base0: #19181a;
+//     --base1: #221f22;
+//     --base2: #2d2a2e;
+//     --base3: #403e41;
+//     --base4: #5b595c;
+//     --base5: #727072;
+//     --base6: #939293;
+//     --base7: #c1c0c0;
+//     --base8: #fcfcfa;
+
 impl BufferUsage {
     pub fn get(&self) -> u32 {
         match self {
@@ -1715,13 +1737,13 @@ pub fn delete_program(program_id: GLuint) {
 }
 
 pub fn create_shader(shader: u32) -> GLuint {
-    unsafe { CreateShader(shader) }
+    unsafe { gll::CreateShader(shader) }
 }
 
 pub fn shader_source(shader_id: GLuint, code: String) {
     unsafe {
         let str = str_to_cstr(code);
-        ShaderSource(shader_id, 1, &str.as_ptr(), std::ptr::null())
+        gll::ShaderSource(shader_id, 1, &str.as_ptr(), std::ptr::null())
     }
 }
 
@@ -1767,13 +1789,13 @@ pub fn validate_program(program_id: GLuint) {
 
 pub fn detach_shader(program_id: GLuint, shader_id: GLuint) {
     unsafe {
-        DetachShader(program_id, shader_id);
+        gll::DetachShader(program_id, shader_id);
     }
 }
 
 pub fn attach_shader(program_id: GLuint, shader_id: GLuint) {
     unsafe {
-        AttachShader(program_id, shader_id);
+        gll::AttachShader(program_id, shader_id);
     }
 }
 
@@ -1786,6 +1808,76 @@ fn create_cstring(len: usize) -> CString {
     unsafe { CString::from_vec_unchecked(buffer) }
 }
 
+// glGenTextures
+pub fn gen_texture() -> GLuint {
+    unsafe {
+        let mut id: GLuint = 0;
+        gll::GenTextures(1, &mut id);
+        id
+    }
+}
+
+// glBindTexture
+pub fn bind_texture(target: GLenum, id: GLuint) {
+    unsafe {
+        gll::BindTexture(target, id);
+    }
+}
+
+// glActiveTexture
+pub fn active_texture(texture: GLenum) {
+    unsafe {
+        gll::ActiveTexture(texture);
+    }
+}
+// glTexImage2D
+pub fn tex_image_2d(target: GLenum, level: GLint, gl_format: GLenum, width: u32, height: u32, border: i32, image_format: GLenum, pixel_format: GLenum, pixels: Option<&Vec<u8>>) {
+    unsafe {
+        let pixels = match pixels {
+            None => ptr::null(),
+            Some(data) => vec_to_ptr(data)
+        };
+        gll::TexImage2D(target, level, gl_format as GLint, width as i32, height as i32, border, image_format, pixel_format, pixels)
+    }
+}
+
+// glGenerateMipmap
+pub fn generate_mipmap(target: GLenum) {
+    unsafe {
+        gll::GenerateMipmap(target)
+    }
+}
+
+
+// glTexImage2D
+pub fn tex_sub_image_2d(target: GLenum, level: GLint, x: u32, y: u32, width: u32, height: u32, image_format: GLenum, pixel_format: GLenum, pixels: &Vec<u8>) {
+    unsafe {
+        gll::TexSubImage2D(target, level, x as i32, y as i32, width as i32, height as i32, image_format, pixel_format, vec_to_ptr(pixels))
+    }
+}
+
+// glPixelStorei
+pub fn pixel_store_i(parameter: GLenum, value: u32) {
+    unsafe {
+        gll::PixelStorei(parameter, value as GLint)
+    }
+}
+
+// glTexParameteri
+pub fn tex_parameter_i(target: GLenum, parameter: GLenum, value: u32) {
+    unsafe {
+        gll::TexParameteri(target, parameter, value as GLint)
+    }
+}
+
+pub fn tex_parameter_f(target: GLenum, parameter: GLenum, value: f32) {
+    unsafe {
+        gll::TexParameterf(target, parameter, value)
+    }
+}
+unsafe fn vec_to_ptr<T>(vec: &Vec<T>) -> *const c_void {
+    vec.as_ptr() as *const gll::types::GLvoid
+}
 
 unsafe fn str_to_cstr(string: String) -> CString {
     CString::new(string).unwrap()
@@ -1795,6 +1887,7 @@ unsafe fn str_to_cstr(string: String) -> CString {
 fn u32_to_enum(bits: u32) -> GLenum {
     GLenum::from(bits)
 }
+
 
 
 
