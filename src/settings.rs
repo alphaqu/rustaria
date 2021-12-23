@@ -9,7 +9,7 @@ impl Settings {
     pub fn new() -> Settings {
         Self {
             render_distance: 4,
-            zoom: 120 as f32,
+            zoom: 1 as f32,
             cull_chunks: true
         }
     }
