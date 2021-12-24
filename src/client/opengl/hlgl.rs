@@ -8,7 +8,6 @@ use std::path::Path;
 
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView, ImageBuffer};
 use image::imageops::FilterType;
-use potpack::{Id, PotPack, SizedItem};
 use rectangle_pack::{contains_smallest_box, GroupedRectsToPlace, pack_rects, RectanglePackError, RectanglePackOk, RectToInsert, TargetBin, volume_heuristic};
 
 use crate::client::opengl::builder::VertexBuilderTrait;
@@ -16,9 +15,10 @@ use crate::client::opengl::builder::VertexBuilderTrait;
 use crate::client::opengl::gl::{
 	self, BufferTarget, BufferType, BufferUsage, DataType, VertexDivisor,
 };
-use crate::consts::{TileId, WallId};
+use crate::world::wall::WallId;
+use crate::world::tile::TileId;
 
-use super::gll::types::{GLenum, GLuint};
+use opengl_raw::gll::types::{GLenum, GLuint};
 
 pub struct Program {
 	program_id: GLuint,

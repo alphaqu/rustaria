@@ -1,7 +1,7 @@
 use crate::settings::Settings;
 
 const GRAVITY: f32 = 0.2;
-const BASE_SPEED: f32 = 2f32;
+const BASE_SPEED: f32 = 8f32;
 
 pub struct Player {
     pub speed: f32,

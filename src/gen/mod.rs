@@ -1,7 +1,6 @@
-use crate::{consts};
 use crate::util::{CHUNK_SIZE, Direction};
-use crate::world::{Chunk, Grid, World};
-use crate::world::gen::noise::{NoiseGenerator, SUB_BIOME, TERRAIN};
+use crate::world::{Chunk, Grid, tile, World};
+use crate::gen::noise::{NoiseGenerator, SUB_BIOME, TERRAIN};
 use crate::pos::{ChunkPos, ChunkSubPos};
 use crate::world::tile::Tile;
 
@@ -60,15 +59,15 @@ impl WorldGenerator {
 			for y in 0..CHUNK_SIZE {
 				let tile_y = (y as i32 + (pos.y as i32 * CHUNK_SIZE as i32)) as i32;
 				if tile_y < hell_floor_height_line as i32 {
-					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(consts::TILE_ASH_BLOCK));
+					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::ASH_BLOCK));
 				} else if tile_y < hell_ceiling_height_line as i32 {
 					// stuff
 				} else if tile_y < cave_height_line as i32 {
-					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(consts::TILE_STONE));
+					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::STONE));
 				} else if tile_y < cave_transition_height as i32 {
-					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(consts::TILE_STONE));
+					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::STONE));
 				} else if tile_y < terrain_height_line as i32 {
-					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(consts::TILE_DIRT));
+					chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::DIRT));
 				}
 			}
 		}

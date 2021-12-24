@@ -2,20 +2,20 @@ use std::collections::HashSet;
 use std::sync::mpsc::Receiver;
 
 use glfw::{Action, Context, Glfw, Key, MouseButton, SwapInterval, Window, WindowEvent};
-use rand::{Rng, thread_rng};
 
-use crate::{consts, Player, random_quote};
+use crate::{Player};
 use crate::client::chunk_renderer::ChunkRenderer;
 use crate::client::controller::ControlHandler;
 use crate::client::fps::FpsCounter;
-use crate::client::opengl::{gl, gll};
+use crate::client::opengl::{gl};
 use crate::client::opengl::gl::{COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT};
 use crate::client::viewport::Viewport;
-use crate::consts::TileId;
+use crate::world::tile::TileId;
+use crate::misc::random_quote;
 use crate::pos::{ChunkPos, WorldPos};
 use crate::settings::Settings;
 use crate::util::CHUNK_SIZE;
-use crate::world::{Chunk, World};
+use crate::world::{Chunk, tile, wall, World};
 use crate::world::neighbor::NeighborAware;
 use crate::world::tile::Tile;
 use crate::world::wall::Wall;
@@ -25,6 +25,7 @@ pub mod opengl;
 pub mod viewport;
 pub mod fps;
 pub mod controller;
+mod client_settings;
 
 pub struct ClientHandler<'a> {
 	glfw: Glfw,
@@ -96,7 +97,7 @@ impl<'a> ClientHandler<'a> {
 					let tile_x = (player.pos_x + ((((x / self.viewport.width as f32) * 2f32) - 1f32) * tiles_x)).floor();
 					let tile_y = (player.pos_y - ((((y / self.viewport.height as f32) * 2f32) - 1f32) * tiles_y)).floor();
 					let pos = WorldPos::new(tile_x as i32, tile_y as u32);
-					world.set(&pos, Tile::id(consts::TILE_AMETHYST));
+					world.set(&pos, Tile::id(tile::AMETHYST));
 					self.chunk_renderer.tile_change(&pos);
 				},
 				WindowEvent::MouseButton(MouseButton::Button3, Action::Press, _) => {
@@ -107,7 +108,7 @@ impl<'a> ClientHandler<'a> {
 					let tile_x = (player.pos_x + ((((x / self.viewport.width as f32) * 2f32) - 1f32) * tiles_x)).floor();
 					let tile_y = (player.pos_y - ((((y / self.viewport.height as f32) * 2f32) - 1f32) * tiles_y)).floor();
 					let pos = WorldPos::new(tile_x as i32, tile_y as u32);
-					world.set(&pos, Wall::id(consts::WALL_STONE));
+					world.set(&pos, Wall::id(wall::STONE));
 					self.chunk_renderer.tile_change(&pos);
 				}
 				WindowEvent::MouseButton(MouseButton::Button2, Action::Press, _) => {
@@ -118,7 +119,7 @@ impl<'a> ClientHandler<'a> {
 					let tile_x = (player.pos_x + ((((x / self.viewport.width as f32) * 2f32) - 1f32) * tiles_x)).floor();
 					let tile_y = (player.pos_y - ((((y / self.viewport.height as f32) * 2f32) - 1f32) * tiles_y)).floor();
 					let pos = WorldPos::new(tile_x as i32, tile_y as u32);
-					world.set(&pos, Tile::id(consts::TILE_AIR));
+					world.set(&pos, Tile::id(tile::AIR));
 					self.chunk_renderer.tile_change(&pos);
 				}
 				WindowEvent::CursorPos(x, y) => {
@@ -151,7 +152,7 @@ impl<'a> ClientHandler<'a> {
 
 
 		println!("Launching Window");
-		let title = random_quote::TITLE_QUOTES.get(thread_rng().gen_range(0..random_quote::TITLE_QUOTES.len())).unwrap();
+		let title = random_quote::TITLE_QUOTES.get(1).unwrap();
 		let (mut window, events) = glfw
 			.create_window(900, 600, title, glfw::WindowMode::Windowed)
 			.expect("Failed to create GLFW window.");
@@ -165,8 +166,8 @@ impl<'a> ClientHandler<'a> {
 
 
 		println!("Setting GL Context");
-		gll::load_with(|s| glfw.get_proc_address_raw(s));
-		gll::Viewport::load_with(|s| glfw.get_proc_address_raw(s));
+		opengl_raw::gll::load_with(|s| glfw.get_proc_address_raw(s));
+		opengl_raw::gll::Viewport::load_with(|s| glfw.get_proc_address_raw(s));
 
 
 		println!("Preparing Graphical Backend");

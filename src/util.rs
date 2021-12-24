@@ -1,6 +1,5 @@
 use std::ops::Deref;
 use std::slice::Iter;
-use crate::consts;
 use crate::world::tile::{Tile};
 
 pub const CHUNK_SIZE: usize = 24;

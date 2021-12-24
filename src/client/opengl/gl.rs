@@ -4,9 +4,9 @@
 use std::ffi::{c_void, CStr, CString};
 use std::ptr;
 
-use super::gll;
-use super::gll::{CompileShader, GetShaderiv};
-use super::gll::types::{GLboolean, GLenum, GLint, GLsizei, GLuint, GLuint64, GLvoid};
+use opengl_raw::gll;
+use opengl_raw::gll::{CompileShader, GetShaderiv};
+use opengl_raw::gll::types::{GLboolean, GLenum, GLint, GLsizei, GLuint, GLuint64, GLvoid};
 
 pub const ACTIVE_ATOMIC_COUNTER_BUFFERS: u32 = 0x92D9;
 pub const ACTIVE_ATTRIBUTES: u32 = 0x8B89;

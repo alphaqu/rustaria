@@ -1,5 +1,4 @@
 use std::ops::Deref;
-use crate::consts;
 use crate::util::Direction;
 use crate::world::tile::Tile;
 

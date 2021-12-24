@@ -6,7 +6,7 @@ use std::path::Path;
 use glam::{Vec2, Vec3};
 use image::GenericImageView;
 
-use crate::{consts, Player, read_asset_string, Settings};
+use crate::{Player, read_asset_string, Settings};
 use crate::client::opengl::builder::{QuadBuilder, QuadDepthBuilder};
 use crate::client::opengl::gl;
 use crate::client::opengl::gl::{BufferUsage, DataType, VertexDivisor};
@@ -14,7 +14,7 @@ use crate::client::opengl::hlgl::{Atlas, AtlasGroup, AtlasSettings, Image, Image
 use crate::client::viewport::Viewport;
 use crate::pos::{ChunkPos, WorldPos};
 use crate::util::{CHUNK_SIZE, Direction};
-use crate::world::{Grid, World};
+use crate::world::{Grid, tile, wall, World};
 use crate::world::neighbor::NeighborAware;
 use crate::world::tile::Tile;
 use crate::world::wall::Wall;
@@ -201,7 +201,7 @@ impl BakedChunk {
 
 
 					let i = Self::get_variant(pos, y, x);
-					if wall_x.id != consts::WALL_AIR {
+					if wall_x.id != wall::AIR {
 						vertices += 6; // quad
 						builder.add_wall(x, y, wall_x, tile_atlas, i);
 					}
@@ -214,7 +214,7 @@ impl BakedChunk {
 					let tile_x = &tiles_y[x];
 
 					let i = Self::get_variant(pos, y, x);
-					if tile_x.id != consts::TILE_AIR {
+					if tile_x.id != tile::AIR {
 						vertices += 6; // quad
 						builder.add_tile(x, y, tile_x, tile_atlas, i);
 					}
@@ -350,7 +350,7 @@ impl ChunkVertexBuilder {
 
 	pub fn export(self) -> VertexLayout {
 		let mut layout = VertexLayout::new(2);
-		layout.add_vbo(0, self.pos, BufferUsage::StaticDraw, VertexDivisor::Vertex);
+		layout.add_vbo(0, self.pos,      BufferUsage::StaticDraw, VertexDivisor::Vertex);
 		layout.add_vbo(1, self.textures, BufferUsage::StaticDraw, VertexDivisor::Vertex);
 		layout
 	}

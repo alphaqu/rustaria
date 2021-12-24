@@ -3,12 +3,10 @@ use std::collections::{HashMap, HashSet};
 
 use neighbor::NeighborAware;
 
-use crate::consts::{Entity};
-
 use crate::pos::{ChunkPos, ChunkSubPos, WorldPos};
 use crate::util::{CHUNK_SIZE, Direction};
-use crate::world::gen::WorldGenerator;
-use crate::world::neighbor::{NeighborMatrix};
+use crate::gen::WorldGenerator;
+use crate::world::neighbor::NeighborMatrix;
 use crate::world::tick::TickHandler;
 use crate::world::tile::Tile;
 use crate::world::wall::Wall;
@@ -17,7 +15,6 @@ pub mod tile;
 pub mod wall;
 pub mod tick;
 pub mod neighbor;
-mod gen;
 
 pub struct World<'a> {
 	pub chunk_updates: HashSet<ChunkPos>,
@@ -125,7 +122,6 @@ pub struct Chunk {
 	pos: ChunkPos,
 	solid_tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE],
 	solid_walls: [[Wall; CHUNK_SIZE]; CHUNK_SIZE],
-	entities: Vec<Entity>,
 }
 
 impl Chunk {
@@ -137,7 +133,6 @@ impl Chunk {
 			pos,
 			solid_tiles,
 			solid_walls,
-			entities: Vec::new(),
 		}
 	}
 }
