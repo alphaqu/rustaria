@@ -1,4 +1,4 @@
-use crate::util::{CallbackResponse, Direction};
+use crate::misc::util::{CallbackResponse, Direction};
 use crate::world::neighbor::{NeighborAware, NeighborMatrix, NeighborType};
 use crate::world::tick::Tickable;
 use crate::world::tile;

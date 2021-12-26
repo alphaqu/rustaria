@@ -1,5 +1,5 @@
 use crate::player::Player;
-use crate::util::{CHUNK_SIZE, Direction};
+use crate::misc::util::{CHUNK_SIZE, Direction};
 
 #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
 pub struct WorldPos {
@@ -74,8 +74,12 @@ impl ChunkPos {
 	}
 
 	pub fn shift(&self, direction: &Direction) -> Option<ChunkPos> {
-		let next_x = (self.x as i32 + direction.get_x_difference() as i32);
-		let next_y = (self.y as i32 + direction.get_y_difference() as i32);
+		self.shift_amount(direction, 1)
+	}
+
+	pub fn shift_amount(&self, direction: &Direction, amount: i32) -> Option<ChunkPos> {
+		let next_x = (self.x as i32 + (direction.get_x_difference() as i32 * amount));
+		let next_y = (self.y as i32 + (direction.get_y_difference() as i32 * amount));
 		if next_y <= u16::MIN as i32 || next_y >= u16::MAX as i32 || next_x <= i16::MIN as i32 || next_x >= i16::MAX as i32 {
 			return None;
 		}
@@ -89,10 +93,10 @@ impl ChunkPos {
 impl ChunkSubPos {
 	pub fn new(x: u8, y: u8) -> ChunkSubPos {
 		if x >= CHUNK_SIZE as u8 {
-			panic!("X {} is bigger than {} which is the chunk size.", x, CHUNK_SIZE);
+			panic!("X {} is bigger than {} which is the render size.", x, CHUNK_SIZE);
 		}
 		if y >= CHUNK_SIZE as u8 {
-			panic!("Y {} is bigger than {} which is the chunk size.", y, CHUNK_SIZE);
+			panic!("Y {} is bigger than {} which is the render size.", y, CHUNK_SIZE);
 		}
 		Self {
 			x,

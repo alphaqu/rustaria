@@ -33,9 +33,9 @@ impl ChunkGenerator {
         let mut chunk = Chunk::new(pos.clone());
         let chunk_x = (pos.x as i32 * CHUNK_SIZE as i32) as f32;
         let chunk_y = (pos.y as u32 * CHUNK_SIZE as u32) as f32;
-        //self.generate_surface_terrain(&mut chunk, chunk_x, chunk_y);
+        //self.generate_surface_terrain(&mut render, chunk_x, chunk_y);
         self.generate_caves(&mut chunk, chunk_x, chunk_y);
-        //self.generate_surface_terrain(&mut chunk, chunk_x, chunk_y);
+        //self.generate_surface_terrain(&mut render, chunk_x, chunk_y);
 
 
         for y in 0..CHUNK_SIZE {

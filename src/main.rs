@@ -1,42 +1,39 @@
 extern crate glfw;
 
-use std::collections::BTreeMap;
-use std::fs::{File, read_dir};
+use std::fs::File;
 use std::io::Read;
-use std::path::Path;
-
-use image::{DynamicImage, GenericImage, GenericImageView};
-use rectangle_pack::{contains_smallest_box, GroupedRectsToPlace, pack_rects, RectToInsert, TargetBin, volume_heuristic};
+use crate::client::ClientHandler;
 
 use crate::player::Player;
-use crate::settings::Settings;
 use crate::world::World;
 
 pub mod player;
 pub mod world;
 pub mod client;
 pub mod settings;
-mod util;
-pub mod pos;
 mod network;
 mod misc;
 mod gen;
+mod local;
 
 fn main() {
-	run_rustaria()
+	run_rustaria();
 }
 
-fn run_rustaria() {
-	println!("Launching Rustaria. This is gonna be rusty.");
-	// let mut world_gen = terraria_gen::WorldGen::new(893, 1743);
-	// world_gen.generate_terrain();
 
-	let mut player = Player::new();
-	let mut settings = Settings::new();
-	let mut client = client::ClientHandler::launch(&player);
+
+fn run_rustaria() {
+	let mut client: ClientHandler = client::ClientHandler::create();
+	let world = World::new();
+	client.join_world(world);
+
+	println!("Launching Rustaria. This is gonna be rusty.");
+	// yyour mom let mut world_gen = terraria_gen::WorldGen::new(893, 1743);
+	// world_gen.generate_te rrain();
+
 	loop {
-		client.draw(&mut settings);
-		client.tick(&mut settings);
+		client.draw();
+		client.tick();
 	}
 }
 

@@ -8,7 +8,7 @@ pub struct Settings {
 impl Settings {
     pub fn new() -> Settings {
         Self {
-            render_distance: 4,
+            render_distance: 8,
             zoom: 1 as f32,
             cull_chunks: true
         }

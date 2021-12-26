@@ -3,11 +3,11 @@ use std::collections::{HashMap, HashSet};
 
 use neighbor::NeighborAware;
 
-use crate::pos::{ChunkPos, ChunkSubPos, WorldPos};
-use crate::util::{CHUNK_SIZE, Direction};
+use crate::misc::pos::{ChunkPos, ChunkSubPos, WorldPos};
+use crate::misc::util::{CHUNK_SIZE, Direction};
 use crate::gen::WorldGenerator;
+use crate::Player;
 use crate::world::neighbor::NeighborMatrix;
-use crate::world::tick::TickHandler;
 use crate::world::tile::Tile;
 use crate::world::wall::Wall;
 
@@ -16,53 +16,97 @@ pub mod wall;
 pub mod tick;
 pub mod neighbor;
 
-pub struct World<'a> {
+// un hard code this
+const RENDER_DISTANCE: i32 = 4;
+
+pub struct World {
+	players: HashMap<PlayerId, Player>,
 	pub chunk_updates: HashSet<ChunkPos>,
 	chunks: HashMap<ChunkPos, Chunk>,
-	tick_handler: TickHandler<'a>,
 	chunk_generator: WorldGenerator,
 }
 
-impl<'a> World<'a> {
-	pub fn new() -> World<'a> {
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct PlayerId {
+	id: usize
+}
+
+impl PlayerId {
+	pub fn new() -> Self {
 		Self {
+			id: usize::MAX
+		}
+	}
+}
+
+impl World {
+	pub fn new() -> World {
+		Self {
+			players: HashMap::new(),
 			chunk_updates: HashSet::new(),
 			chunks: HashMap::new(),
-			tick_handler: TickHandler::new(),
 			chunk_generator: WorldGenerator::new(69),
 		}
 	}
 
-	pub fn tick(&mut self) {
-		self.tick_handler.tick();
+	// FIXME Not multiplayer ready because if a player leaves the ids will be misaligned
+	pub fn player_join(&mut self, player: Player) -> PlayerId {
+		let id = PlayerId {
+			id: self.players.len()
+		};
+		self.players.insert(id, player);
+		id
 	}
 
-	pub fn poll_chunk(&mut self, pos: &ChunkPos) -> &Chunk {
-		return if self.chunks.contains_key(pos) {
-			self.chunks.get(pos).unwrap()
-		} else {
-			let chunk = self.chunk_generator.gen_chunk(pos);
-			//let chunk = self.compile_neighbors(chunk, pos);
-			// let mut chunk = terraria_gen::generate_terrain(pos);
-			self.chunks.insert(*pos, chunk);
-			let chunk = self.chunks.get(pos).unwrap();
+	pub fn acquire_player_mut(&mut self, id: &PlayerId) -> &mut Player {
+		self.players.get_mut(id).expect("Could not find player")
+	}
+
+	pub fn acquire_player(&self, id: &PlayerId) -> &Player {
+		self.players.get(id).expect("Could not find player")
+	}
 
 
-			// TODO sensei fix this
-			unsafe {
-				for y in 0..CHUNK_SIZE {
-					for x in 0..CHUNK_SIZE {
-						let pointer = chunk as *const Chunk as *mut Chunk;
-						let self_pointer = self as *const World as *mut World;
-						let pos = &WorldPos::from_chunk(pos, x as u8, y as u8);
-						(self_pointer.as_mut().unwrap()).update_neighbor(pos, &mut pointer.as_mut().unwrap().solid_tiles[y][x]);
+	pub fn tick(&mut self) {
+		for (id, player) in &mut self.players {
+			player.pos_x += player.vel_x;
+			player.pos_y += player.vel_y;
+		}
+
+		for (id, player) in &self.players {
+			let lookup_pos = ChunkPos::from_player(player);
+
+			for x in (-RENDER_DISTANCE)..RENDER_DISTANCE {
+				if let Some(lookup_pos) = lookup_pos.shift_amount(&Direction::Left, x) {
+					for y in (-RENDER_DISTANCE)..RENDER_DISTANCE {
+						if let Some(pos) = lookup_pos.shift_amount(&Direction::Down, y) {
+							if !self.chunks.contains_key(&pos) {
+								let chunk = self.chunk_generator.gen_chunk(&pos);
+								//let render = self.compile_neighbors(render, pos);
+								// let mut render = terraria_gen::generate_terrain(pos);
+								self.chunks.insert(pos.clone(), chunk);
+								let chunk = self.chunks.get(&pos).unwrap();
+
+
+								// TODO sensei fix this
+								unsafe {
+									for y in 0..CHUNK_SIZE {
+										for x in 0..CHUNK_SIZE {
+											let pointer = chunk as *const Chunk as *mut Chunk;
+											let self_pointer = self as *const World as *mut World;
+											let pos = &WorldPos::from_chunk(&pos, x as u8, y as u8);
+											(self_pointer.as_mut().unwrap()).update_neighbor(pos, &mut pointer.as_mut().unwrap().solid_tiles[y][x]);
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
-
-			chunk
-		};
+		}
 	}
+
 
 	pub fn get<C: NeighborAware>(&self, pos: &WorldPos) -> Option<&C> where Chunk: Grid<C> {
 		self.chunks.get(&pos.get_chunk_pos()).map(|chunk| {
@@ -119,18 +163,16 @@ impl<'a> World<'a> {
 
 
 pub struct Chunk {
-	pos: ChunkPos,
 	solid_tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE],
 	solid_walls: [[Wall; CHUNK_SIZE]; CHUNK_SIZE],
 }
 
 impl Chunk {
-	pub fn new(pos: ChunkPos) -> Chunk {
+	pub fn new() -> Chunk {
 		let solid_tiles = [[Tile::air(); CHUNK_SIZE]; CHUNK_SIZE];
 		let solid_walls = [[Wall::air(); CHUNK_SIZE]; CHUNK_SIZE];
 
 		Self {
-			pos,
 			solid_tiles,
 			solid_walls,
 		}
@@ -184,64 +226,64 @@ pub trait Grid<C> {
 }
 
 
-//	pub fn compile_neighbors(&mut self, mut chunk: Chunk, pos: &ChunkPos) -> Chunk {
+//	pub fn compile_neighbors(&mut self, mut render: Chunk, pos: &ChunkPos) -> Chunk {
 // 		// first pass, internals
 // 		for y in 0..(CHUNK_SIZE - 1) {
 // 			for x in 0..(CHUNK_SIZE - 1) {
 // 				// right side
-// 				Self::neighbor_update(Direction::Right, &mut chunk, x, y, x + 1, y);
+// 				Self::neighbor_update(Direction::Right, &mut render, x, y, x + 1, y);
 // 				// bottom size
-// 				Self::neighbor_update(Direction::Down, &mut chunk, x, y, x, y + 1);
+// 				Self::neighbor_update(Direction::Down, &mut render, x, y, x, y + 1);
 // 			}
 // 		}
 //
-// 		// right chunk border
+// 		// right render border
 // 		let x = (CHUNK_SIZE - 1);
-// 		let mut common = |chunk: &mut Chunk, y: usize| {
-// 			Self::neighbor_update(Direction::Down, chunk, x.clone(), y.clone(), x, y + 1);
+// 		let mut common = |render: &mut Chunk, y: usize| {
+// 			Self::neighbor_update(Direction::Down, render, x.clone(), y.clone(), x, y + 1);
 // 		};
 //
 // 		// right side
 // 		match self.get_chunk_mut(&pos.right().unwrap()) {
 // 			None => {
 // 				for y in 0..(CHUNK_SIZE - 1) {
-// 					common(&mut chunk, y);
+// 					common(&mut render, y);
 // 				}
 // 			}
 // 			Some(mut neighbor) => {
 // 				for y in 0..(CHUNK_SIZE - 1) {
-// 					Self::neighbor_update_c(Direction::Right, &mut chunk, x, y, &mut neighbor, 0, y);
-// 					common(&mut chunk, y);
+// 					Self::neighbor_update_c(Direction::Right, &mut render, x, y, &mut neighbor, 0, y);
+// 					common(&mut render, y);
 // 				}
 // 			}
 // 		}
 //
 //
-// 		// bottom chunk border
+// 		// bottom render border
 // 		let y = (CHUNK_SIZE - 1);
-// 		let mut common = |chunk: &mut Chunk, x: usize| {
-// 			Self::neighbor_update(Direction::Right, chunk, x.clone(), y.clone(), x + 1, y);
+// 		let mut common = |render: &mut Chunk, x: usize| {
+// 			Self::neighbor_update(Direction::Right, render, x.clone(), y.clone(), x + 1, y);
 // 		};
 //
 // 		match self.get_chunk_mut(&pos.right().unwrap()) {
 // 			None => {
 // 				for x in 0..(CHUNK_SIZE - 1) {
-// 					common(&mut chunk, x);
+// 					common(&mut render, x);
 // 				};
 // 			}
 // 			Some(mut neighbor) => {
 // 				for x in 0..(CHUNK_SIZE - 1) {
-// 					Self::neighbor_update_c(Direction::Down, &mut chunk, x, y, neighbor, x, 0);
-// 					common(&mut chunk, x);
+// 					Self::neighbor_update_c(Direction::Down, &mut render, x, y, neighbor, x, 0);
+// 					common(&mut render, x);
 // 				};
 // 			}
 // 		}
 //
-// 		chunk
+// 		render
 // 	}
 //
-// 	fn neighbor_update_c(dir: Direction, chunk: &mut Chunk, x: usize, y: usize, n_chunk: &mut Chunk, n_x: usize, n_y: usize) {
-// 		let chunk_ptr = chunk as *const Chunk as *mut Chunk;
+// 	fn neighbor_update_c(dir: Direction, render: &mut Chunk, x: usize, y: usize, n_chunk: &mut Chunk, n_x: usize, n_y: usize) {
+// 		let chunk_ptr = render as *const Chunk as *mut Chunk;
 // 		let n_chunk_ptr = n_chunk as *const Chunk as *mut Chunk;
 //
 // 		// TODO sensei fix this
@@ -251,8 +293,8 @@ pub trait Grid<C> {
 // 		}
 // 	}
 //
-// 	fn neighbor_update(dir: Direction, chunk: &mut Chunk, x: usize, y: usize, n_x: usize, n_y: usize) {
-// 		let chunk_ptr = chunk as *const Chunk as *mut Chunk;
+// 	fn neighbor_update(dir: Direction, render: &mut Chunk, x: usize, y: usize, n_x: usize, n_y: usize) {
+// 		let chunk_ptr = render as *const Chunk as *mut Chunk;
 //
 // 		// TODO sensei fix this
 // 		unsafe {

@@ -1,4 +1,4 @@
-use crate::util::CallbackResponse;
+use crate::misc::util::CallbackResponse;
 
 pub trait Tickable {
     fn tick(&self) -> CallbackResponse;

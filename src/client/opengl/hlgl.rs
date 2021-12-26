@@ -389,23 +389,23 @@ impl Atlas {
 			);
 		}
 
-		for i in 0..=mipmaps {
-			println!("savign thigs {}", i);
-			let pbo = gl::gen_buffer();
-			gl::bind_buffer(&BufferType::PixelPackBuffer, &pbo);
-			let width = (atlas_w >> i);
-			let height = (atlas_h >> i);
-			let size = (width * height * 4) as usize;
-			gl::buffer_data::<u8>(BufferTarget::PixelPackBuffer, size, None, BufferUsage::StreamRead);
-			gl::get_tex_image(gl::TEXTURE_2D, i as i32, gl::RGBA, width, height, 0, gl::UNSIGNED_BYTE);
-			let mut out: Vec<u8> = Vec::with_capacity(size);
-			for j in 0..size {
-				out.push(0);
-			}
-			gl::get_buffer_subdata(gl::PIXEL_PACK_BUFFER, 0, size, &mut out);
-			image::save_buffer(format!("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\archive\\{}-tile-atlas.png", i), out.as_slice(), width, height, ColorType::Rgba8);
-			gl::delete_buffer(pbo);
-		}
+		//for i in 0..=mipmaps {
+		//	println!("savign thigs {}", i);
+		//	let pbo = gl::gen_buffer();
+		//	gl::bind_buffer(&BufferType::PixelPackBuffer, &pbo);
+		//	let width = (atlas_w >> i);
+		//	let height = (atlas_h >> i);
+		//	let size = (width * height * 4) as usize;
+		//	gl::buffer_data::<u8>(BufferTarget::PixelPackBuffer, size, None, BufferUsage::StreamRead);
+		//	gl::get_tex_image(gl::TEXTURE_2D, i as i32, gl::RGBA, width, height, 0, gl::UNSIGNED_BYTE);
+		//	let mut out: Vec<u8> = Vec::with_capacity(size);
+		//	for j in 0..size {
+		//		out.push(0);
+		//	}
+		//	gl::get_buffer_subdata(gl::PIXEL_PACK_BUFFER, 0, size, &mut out);
+		//	image::save_buffer(format!("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\archive\\{}-tile-atlas.png", i), out.as_slice(), width, height, ColorType::Rgba8);
+		//	gl::delete_buffer(pbo);
+		//}
 
 		Self {
 			id,

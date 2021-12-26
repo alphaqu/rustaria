@@ -1,7 +1,7 @@
-use crate::util::{CHUNK_SIZE, Direction};
+use crate::misc::util::{CHUNK_SIZE, Direction};
 use crate::world::{Chunk, Grid, tile, World};
 use crate::gen::noise::{NoiseGenerator, SUB_BIOME, TERRAIN};
-use crate::pos::{ChunkPos, ChunkSubPos};
+use crate::misc::pos::{ChunkPos, ChunkSubPos};
 use crate::world::tile::Tile;
 
 mod feature;
@@ -30,7 +30,7 @@ impl WorldGenerator {
 	}
 
 	pub fn gen_chunk(&self, pos: &ChunkPos) -> Chunk {
-		let mut chunk = Chunk::new(*pos);
+		let mut chunk = Chunk::new();
 		self.generate_terrain(&mut chunk, pos);
 		chunk
 	}

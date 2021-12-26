@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::{c_void, CString};
 use std::ptr;
 
 use opengl_raw::gll;
 use opengl_raw::gll::{CompileShader, GetShaderiv};
-use opengl_raw::gll::types::{GLboolean, GLenum, GLint, GLsizei, GLuint, GLuint64, GLvoid};
+use opengl_raw::gll::types::{GLboolean, GLenum, GLint, GLuint, GLuint64, GLvoid};
 
 pub const ACTIVE_ATOMIC_COUNTER_BUFFERS: u32 = 0x92D9;
 pub const ACTIVE_ATTRIBUTES: u32 = 0x8B89;
@@ -1786,14 +1786,14 @@ pub fn buffer_data<T>(target: BufferTarget, size: usize, data: Option<Vec<T>>, u
 }
 
 // glGetTexImage
-pub fn get_tex_image(target: GLenum, level: GLint, gl_format: GLenum, width: u32, height: u32, border: i32, pixel_format: GLenum ) {
-	unsafe  {
+pub fn get_tex_image(target: GLenum, level: GLint, gl_format: GLenum, width: u32, height: u32, border: i32, pixel_format: GLenum) {
+	unsafe {
 		gll::GetTexImage(target, level, gl_format, pixel_format, 0 as *mut GLvoid);
 	}
 }
 
 pub fn get_buffer_subdata<T>(target: GLenum, offset: usize, size: usize, vec: &mut Vec<T>) {
-	unsafe  {
+	unsafe {
 		gll::GetBufferSubData(target, offset as isize, size as isize, vec.as_mut_ptr() as *mut gll::types::GLvoid);
 	}
 }

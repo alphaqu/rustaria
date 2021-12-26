@@ -1,37 +1,40 @@
 use std::collections::HashMap;
 use std::fs::read_dir;
-use std::ops::{Add, Sub};
 use std::path::Path;
 
-use glam::{Vec2, Vec3};
-use image::GenericImageView;
+use glfw::Key;
 
-use crate::{Player, read_asset_string, Settings};
-use crate::client::opengl::builder::{QuadBuilder, QuadDepthBuilder};
+use crate::{Player, read_asset_string};
+use crate::client::client_settings::ClientSettings;
+use crate::client::controller::{ControlHandler, Event, EventKey, EventType, KeyMapping};
 use crate::client::opengl::gl;
-use crate::client::opengl::gl::{BufferUsage, DataType, VertexDivisor};
-use crate::client::opengl::hlgl::{Atlas, AtlasGroup, AtlasSettings, Image, ImageId, Program, Uniform, VertexLayout};
+use crate::client::opengl::hlgl::{Atlas, AtlasSettings, Image, Program, Uniform};
+use crate::client::render::baked_chunk::BakedChunk;
 use crate::client::viewport::Viewport;
-use crate::pos::{ChunkPos, WorldPos};
-use crate::util::{CHUNK_SIZE, Direction};
-use crate::world::{Grid, tile, wall, World};
+use crate::misc::pos::{ChunkPos, WorldPos};
+use crate::misc::util::{CHUNK_SIZE, Direction};
 use crate::world::neighbor::NeighborAware;
-use crate::world::tile::Tile;
-use crate::world::wall::Wall;
+use crate::world::World;
 
-pub struct ChunkRenderer {
-	debug: bool,
+pub struct WorldRenderer {
 	program: Program,
+
 	player_pos: Uniform,
 	gl_zoom: Uniform,
-
 	texture_sampler: Uniform,
 	atlas: Atlas,
+
 	baked_chunks: HashMap<ChunkPos, BakedChunk>,
+
+	debug_mode: bool,
+	cull_chunks: bool,
+	debug_mode_key: EventKey,
+	cull_chunks_key: EventKey,
+	rebuild_chunks_key: EventKey,
 }
 
-impl ChunkRenderer {
-	pub fn new(_player: &Player) -> ChunkRenderer {
+impl WorldRenderer {
+	pub fn new(control_handler: &mut ControlHandler) -> WorldRenderer {
 		let program = Program::new(
 			read_asset_string("shader/tile-fragment.glsl"),
 			read_asset_string("shader/tile-vertex.glsl"),
@@ -46,7 +49,6 @@ impl ChunkRenderer {
 
 			let image = Image::load(buf.as_ref());
 			images.push(image);
-			println!("Added {:?}", buf);
 		}
 
 		for entry in read_dir(Path::new("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\assets\\sprite\\wall")).unwrap() {
@@ -55,7 +57,6 @@ impl ChunkRenderer {
 
 			let image = Image::load(buf.as_ref());
 			images.push(image);
-			println!("Added {:?}", buf);
 		}
 
 		let atlas = Atlas::new(images, AtlasSettings {
@@ -63,38 +64,45 @@ impl ChunkRenderer {
 		});
 
 		Self {
-			debug: false,
-			player_pos: Uniform::new(&program, "glPlayerPos"),
-			gl_zoom: Uniform::new(&program, "glZoom"),
+			player_pos: Uniform::new(&program, "player_pos"),
+			gl_zoom: Uniform::new(&program, "zoom"),
 			texture_sampler: Uniform::new(&program, "texture_sampler"),
-			atlas: atlas,
+			atlas,
 			program,
 			baked_chunks: HashMap::new(),
+			debug_mode: false,
+			cull_chunks: true,
+			debug_mode_key: control_handler.register(Event::new(EventType::new_toggle(), KeyMapping::key(Key::F1), "debug.mode")),
+			cull_chunks_key: control_handler.register(Event::new(EventType::new_toggle(), KeyMapping::key(Key::F2), "debug.cull_chunks")),
+			rebuild_chunks_key: control_handler.register(Event::new(EventType::new_request(), KeyMapping::key(Key::F3), "debug.rebuild_chunks")),
 		}
 	}
 
-	pub fn debug_mode(&mut self) {
-		self.debug = !self.debug;
-	}
+	pub fn event_apply(&mut self, control_handler: &ControlHandler) {
+		if let EventType::Toggle { state } = control_handler.acquire(&self.debug_mode_key) {
+			self.debug_mode = *state;
+		}
 
+		if let EventType::Toggle { state } = control_handler.acquire(&self.cull_chunks_key) {
+			self.cull_chunks = *state;
+		}
+
+		if let EventType::Request { requests } = control_handler.acquire(&self.rebuild_chunks_key) {
+			if *requests > 0 {
+				self.rebuild_all();
+			}
+		}
+
+	}
 	pub fn tick(
 		&mut self,
+		world: &World,
 		viewport: &Viewport,
 		player: &Player,
-		world: &mut World,
-		settings: &Settings,
+		settings: &ClientSettings,
 	) {
-		let pos = ChunkPos::from_player(player);
-		self.process_chunks(viewport, world, &pos, settings.render_distance);
-	}
-
-	fn process_chunks(
-		&mut self,
-		viewport: &Viewport,
-		world: &mut World,
-		player_pos: &ChunkPos,
-		render_distance: u16,
-	) {
+		let player_pos = ChunkPos::from_player(player);
+		let render_distance = settings.render_distance;
 		let render_distance_half = (render_distance as i32 / 2i32) as i32;
 
 		let mut lookup_pos = player_pos.clone();
@@ -109,7 +117,6 @@ impl ChunkRenderer {
 				lookup_pos.x = (player_pos.x as i32 + (x as i32 - render_distance_half)) as i16;
 				if !self.baked_chunks.contains_key(&lookup_pos) {
 					let pos1 = &lookup_pos;
-					world.poll_chunk(pos1);
 					BakedChunk::new(viewport, world, pos1, &self.atlas).map(|baked_chunk| {
 						self.baked_chunks.insert(lookup_pos.clone(), baked_chunk);
 					});
@@ -135,27 +142,19 @@ impl ChunkRenderer {
 		self.baked_chunks.remove(pos.get_chunk_pos());
 	}
 
-	pub fn rebuild_all(&mut self) {
-		self.baked_chunks.clear();
-	}
-
-	pub fn rebuild_chunk(&mut self, chunk_pos: &ChunkPos) {
-		self.baked_chunks.remove(chunk_pos);
-	}
-
-	pub fn draw(&self, viewport: &Viewport, player: &Player, settings: &Settings) {
+	pub fn draw(&self, viewport: &Viewport, player: &Player, settings: &ClientSettings) {
 		self.program.bind();
+		self.atlas.bind();
 		self.player_pos.uniform_2f(
 			player.pos_x * viewport.gl_tile_width,
 			player.pos_y * viewport.gl_tile_height,
 		);
 		self.gl_zoom.uniform_1f(settings.zoom);
 		self.texture_sampler.uniform_1i(0);
-		self.atlas.bind();
 
-		let draw_mode = if self.debug { gl::LINE_STRIP } else { gl::TRIANGLES };
+		let draw_mode = if self.debug_mode { gl::LINE_STRIP } else { gl::TRIANGLES };
 
-		if settings.cull_chunks {
+		if self.cull_chunks{
 			let player_chunk = ChunkPos::from_player(player);
 			let chunks_x = (1f32 / (viewport.gl_tile_width * CHUNK_SIZE as f32)) * settings.zoom;
 			let chunks_y = (1f32 / (viewport.gl_tile_height * CHUNK_SIZE as f32)) * settings.zoom;
@@ -176,183 +175,13 @@ impl ChunkRenderer {
 		}
 		self.program.unbind();
 	}
-}
 
-pub struct BakedChunk {
-	layout: VertexLayout,
-	vertices: u32,
-}
-
-impl BakedChunk {
-	pub fn new(
-		viewport: &Viewport,
-		world: &World,
-		pos: &ChunkPos,
-		tile_atlas: &Atlas,
-	) -> Option<BakedChunk> {
-		world.get_chunk(pos).map(|chunk| {
-			let mut builder = ChunkVertexBuilder::new(viewport, pos);
-			let mut vertices = 0u32;
-
-			for y in 0..CHUNK_SIZE {
-				let walls_y: &[Wall; CHUNK_SIZE] = &chunk.get_grid()[y];
-				for x in 0..CHUNK_SIZE {
-					let wall_x = &walls_y[x];
-
-
-					let i = Self::get_variant(pos, y, x);
-					if wall_x.id != wall::AIR {
-						vertices += 6; // quad
-						builder.add_wall(x, y, wall_x, tile_atlas, i);
-					}
-				}
-			}
-
-			for y in 0..CHUNK_SIZE {
-				let tiles_y: &[Tile; CHUNK_SIZE] = &chunk.get_grid()[y];
-				for x in 0..CHUNK_SIZE {
-					let tile_x = &tiles_y[x];
-
-					let i = Self::get_variant(pos, y, x);
-					if tile_x.id != tile::AIR {
-						vertices += 6; // quad
-						builder.add_tile(x, y, tile_x, tile_atlas, i);
-					}
-				}
-			}
-
-			Self {
-				layout: builder.export(),
-				vertices,
-			}
-		})
+	pub fn rebuild_all(&mut self) {
+		self.baked_chunks.clear();
 	}
 
-	fn get_variant(pos: &ChunkPos, y: usize, x: usize) -> u64 {
-		pub fn next(mut x: u64) -> u64 {
-			x ^= x << 13;
-			x ^= x >> 7;
-			x ^= x << 17;
-			x
-		}
-
-		let i = next(
-			next((x as u64) * 5)
-				+ next(y as u64)
-				+ next(pos.x.abs() as u64 * CHUNK_SIZE as u64)
-				+ next(pos.y as u64 * CHUNK_SIZE as u64),
-		);
-		i
-	}
-
-	pub fn draw(&self, draw_type: u32) {
-		self.layout.bind();
-		gl::draw_arrays(draw_type, 0, self.vertices as i32);
-		self.layout.unbind();
-	}
-}
-
-pub struct ChunkVertexBuilder {
-	pos: Vec<Vec3>,
-	textures: Vec<Vec2>,
-	gl_chunk_x: f32,
-	gl_chunk_y: f32,
-	gl_tile_width: f32,
-	gl_tile_height: f32,
-}
-
-impl ChunkVertexBuilder {
-	pub fn new(viewport: &Viewport, chunk_pos: &ChunkPos) -> ChunkVertexBuilder {
-		Self {
-			pos: Vec::new(),
-			textures: Vec::new(),
-			gl_chunk_x: (chunk_pos.x as f32) * (viewport.gl_tile_width * CHUNK_SIZE as f32),
-			gl_chunk_y: (chunk_pos.y as f32) * (viewport.gl_tile_height * CHUNK_SIZE as f32),
-			gl_tile_width: viewport.gl_tile_width,
-			gl_tile_height: viewport.gl_tile_height,
-		}
-	}
-
-	pub fn add_tile(&mut self, x: usize, y: usize, tile: &Tile, atlas: &Atlas, var: u64) {
-		let gl_pos = Vec2::new(
-			self.gl_chunk_x + (x as f32 * self.gl_tile_width),
-			self.gl_chunk_y + ((y as f32 + 1f32) * self.gl_tile_height),
-		);
-
-		// Tile type position of the sprite.
-		let (type_x, type_y) = NeighborImageLocation::from(tile).get_tile_pos();
-		let image = atlas.get_image(ImageId::Tile(tile.get_id().clone()));
-		let image_pos = Vec2::new(image.x, image.y);
-
-		// We have 3 variants. An entry of tiles is 5x4 but are stacked horizontally for every variant.
-		let variant_offset = (var % 3u64) as f32 * 4f32;
-
-		// Out layout is 12 x 5.
-		// A single tile is always (image.width / 12f32, image.height / 5f32) of size.
-		let item_tile_size = Vec2::new(
-			image.width / 12f32,
-			image.height / 5f32,
-		);
-
-		// ________
-		// _      _
-		// _      _
-		// ________
-		// ^ gl_pos
-
-		// Calculate the offset on the tile sprite.
-		let image_offset = Vec2::new(
-			(type_x as f32 + variant_offset) * item_tile_size.x,
-			(type_y as f32) * item_tile_size.y,
-		);
-
-		// Add stuff
-		self.pos.add_quad(gl_pos, Vec2::new(self.gl_tile_width, -self.gl_tile_height), 1f32);
-		self.textures.add_quad(image_pos.add(image_offset), item_tile_size);
-	}
-
-	pub fn add_wall(&mut self, x: usize, y: usize, wall: &Wall, atlas: &Atlas, var: u64) {
-		// Tile type position of the sprite.
-		let ((w_x, w_y), (width, height)) = NeighborImageLocation::from(wall).get_wall_pos();
-		let image = atlas.get_image(ImageId::Wall(wall.get_id().clone()));
-		let image_pos = Vec2::new(image.x, image.y);
-
-		// - 0.5 is because of the wall texture
-		let gl_pos = Vec2::new(
-			self.gl_chunk_x + (((x as f32 - 0.5) + w_x) * self.gl_tile_width),
-			self.gl_chunk_y + (((y as f32 - 0.5) + w_y) * self.gl_tile_height),
-		);
-
-		// We have 3 variants. An entry of tiles is 2x2 but are stacked horizontally for every variant.
-		let variant_offset = (var % 3u64) as f32 * 2f32;
-
-		let item_tile_size = Vec2::new(
-			image.width / 6f32,
-			image.height / 2f32,
-		);
-
-		// Calculate the offset on the tile sprite.
-		let image_offset = Vec2::new(
-			(w_x as f32 + variant_offset) * item_tile_size.x,
-			(w_y as f32) * item_tile_size.y,
-		);
-
-		let image_size = Vec2::new(
-			item_tile_size.x * width,
-			item_tile_size.y * height,
-		);
-
-		// Add stuff
-		let y1 = (height) * self.gl_tile_height;
-		self.pos.add_quad(gl_pos.sub(Vec2::new(0f32, y1)), Vec2::new(width * self.gl_tile_width, -y1), 0f32);
-		self.textures.add_quad(image_pos.add(image_offset), image_size);
-	}
-
-	pub fn export(self) -> VertexLayout {
-		let mut layout = VertexLayout::new(2);
-		layout.add_vbo(0, self.pos,      BufferUsage::StaticDraw, VertexDivisor::Vertex);
-		layout.add_vbo(1, self.textures, BufferUsage::StaticDraw, VertexDivisor::Vertex);
-		layout
+	pub fn rebuild_chunk(&mut self, chunk_pos: &ChunkPos) {
+		self.baked_chunks.remove(chunk_pos);
 	}
 }
 

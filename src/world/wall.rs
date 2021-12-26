@@ -1,4 +1,4 @@
-use crate::util::Direction;
+use crate::misc::util::Direction;
 use crate::world::neighbor::{NeighborAware, NeighborMatrix, NeighborType};
 use crate::world::tile::Tile;
 use crate::world::wall;

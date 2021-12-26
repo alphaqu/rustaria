@@ -1,5 +1,5 @@
 use std::ops::Deref;
-use crate::util::Direction;
+use crate::misc::util::Direction;
 use crate::world::tile::Tile;
 
 pub trait NeighborAware {
