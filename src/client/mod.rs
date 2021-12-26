@@ -28,9 +28,6 @@ pub struct ClientHandler {
 
 	settings: ClientSettings,
 
-	mouse_x: f32,
-	mouse_y: f32,
-
 	player: PlayerId,
 	world: Option<World>,
 	world_renderer: WorldRenderer,
@@ -95,6 +92,7 @@ impl ClientHandler {
 		};
 
 		self.world_renderer.event_apply(&self.control_handler);
+		self.control_handler.finish();
 		// let player = &mut self.player;
 		// let world = &mut self.world;
 		// let mut resize = false;
@@ -225,8 +223,6 @@ impl ClientHandler {
 			viewport,
 			fps_counter,
 			settings,
-			mouse_x: 0.0,
-			mouse_y: 0.0,
 			world: None,
 			player: PlayerId::new(),
 			world_renderer,

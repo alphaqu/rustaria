@@ -1,6 +1,6 @@
 use noise::{NoiseFn, OpenSimplex, Perlin, Seedable};
 
-pub const TERRAIN: NoiseLayer = NoiseLayer { octaves: 20, scale: 512.0 };
+pub const TERRAIN: NoiseLayer = NoiseLayer { octaves: 16, scale: 512.0 };
 pub const CAVE: NoiseLayer = NoiseLayer { octaves: 16, scale: 32.0 };
 pub const BIOME: NoiseLayer = NoiseLayer { octaves: 1, scale: 256.0 };
 pub const SUB_BIOME: NoiseLayer = NoiseLayer { octaves: 1, scale: 128.0 };

@@ -3,7 +3,7 @@ use crate::settings::Settings;
 use crate::world::tick::Tickable;
 
 const GRAVITY: f32 = 0.2;
-const BASE_SPEED: f32 = 8f32;
+const BASE_SPEED: f32 = 32f32;
 
 pub struct Player {
 	pub speed: f32,

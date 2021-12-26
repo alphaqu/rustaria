@@ -1,11 +1,11 @@
-
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use neighbor::NeighborAware;
 
+use crate::gen::WorldGenerator;
 use crate::misc::pos::{ChunkPos, ChunkSubPos, WorldPos};
 use crate::misc::util::{CHUNK_SIZE, Direction};
-use crate::gen::WorldGenerator;
 use crate::Player;
 use crate::world::neighbor::NeighborMatrix;
 use crate::world::tile::Tile;
@@ -17,7 +17,7 @@ pub mod tick;
 pub mod neighbor;
 
 // un hard code this
-const RENDER_DISTANCE: i32 = 4;
+const RENDER_DISTANCE: i32 = 32;
 
 pub struct World {
 	players: HashMap<PlayerId, Player>,
@@ -28,7 +28,7 @@ pub struct World {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PlayerId {
-	id: usize
+	id: usize,
 }
 
 impl PlayerId {
@@ -68,12 +68,12 @@ impl World {
 
 
 	pub fn tick(&mut self) {
-		for (id, player) in &mut self.players {
-			player.pos_x += player.vel_x;
-			player.pos_y += player.vel_y;
+		for (_, player) in &mut self.players {
+			player.pos_x += player.vel_x * player.speed;
+			player.pos_y += player.vel_y * player.speed;
 		}
 
-		for (id, player) in &self.players {
+		for (_, player) in &self.players {
 			let lookup_pos = ChunkPos::from_player(player);
 
 			for x in (-RENDER_DISTANCE)..RENDER_DISTANCE {
@@ -81,29 +81,71 @@ impl World {
 					for y in (-RENDER_DISTANCE)..RENDER_DISTANCE {
 						if let Some(pos) = lookup_pos.shift_amount(&Direction::Down, y) {
 							if !self.chunks.contains_key(&pos) {
-								let chunk = self.chunk_generator.gen_chunk(&pos);
-								//let render = self.compile_neighbors(render, pos);
-								// let mut render = terraria_gen::generate_terrain(pos);
-								self.chunks.insert(pos.clone(), chunk);
-								let chunk = self.chunks.get(&pos).unwrap();
-
-
-								// TODO sensei fix this
-								unsafe {
-									for y in 0..CHUNK_SIZE {
-										for x in 0..CHUNK_SIZE {
-											let pointer = chunk as *const Chunk as *mut Chunk;
-											let self_pointer = self as *const World as *mut World;
-											let pos = &WorldPos::from_chunk(&pos, x as u8, y as u8);
-											(self_pointer.as_mut().unwrap()).update_neighbor(pos, &mut pointer.as_mut().unwrap().solid_tiles[y][x]);
-										}
-									}
-								}
+								self.chunk_generator.add_chunk(&pos);
 							}
 						}
 					}
 				}
 			}
+		}
+
+
+		let start = Instant::now();
+		if let Some(new_chunks) = self.chunk_generator.generate_chunks() {
+			let length = new_chunks.len();
+			for (pos, chunk) in new_chunks {
+				self.chunks.insert(pos.clone(), chunk);
+				let chunk = self.chunks.get(&pos).unwrap();
+				self.update_borders::<Tile>(&pos, chunk);
+				self.update_borders::<Wall>(&pos, chunk);
+//
+				//// TODO sensei fix this
+				//unsafe {
+				//	for y in 0..CHUNK_SIZE {
+				//		for x in 0..CHUNK_SIZE {
+				//			let pointer = chunk as *const Chunk as *mut Chunk;
+				//			let self_pointer = self as *const World as *mut World;
+				//			let pos = &WorldPos::from_chunk(&pos, x as u8, y as u8);
+				//			(self_pointer.as_mut().unwrap()).update_neighbor(pos, &mut pointer.as_mut().unwrap().solid_tiles[y][x]);
+				//		}
+				//	}
+				//}
+			}
+			println!("Generated {} chunks in {}ms", length, start.elapsed().as_millis());
+		}
+	}
+
+	fn update_borders<C: NeighborAware>(&self, pos: &ChunkPos, chunk: &Chunk) where Chunk: Grid<C> {
+		for dir in Direction::iter() {
+			pos.shift(dir).map(|neighbor_pos| {
+				self.chunks.get(&neighbor_pos).map(|neighbor| {
+					if dir.is_vertical() {
+						let source = dir.get_y_border();
+						let neigh = dir.flip().get_y_border();
+						for x in 0..CHUNK_SIZE {
+							unsafe {
+								NeighborMatrix::update_neighbor(
+									chunk.get(&ChunkSubPos::new(x as u8, source)),
+									neighbor.get(&ChunkSubPos::new(x as u8, neigh)),
+									dir.clone()
+								);
+							}
+						}
+					} else {
+						let source = dir.get_x_border();
+						let neigh = dir.flip().get_x_border();
+						for y in 0..CHUNK_SIZE {
+							unsafe {
+								NeighborMatrix::update_neighbor(
+									chunk.get(&ChunkSubPos::new(source, y as u8)),
+									neighbor.get(&ChunkSubPos::new(neigh, y as u8)),
+									dir.clone()
+								);
+							}
+						}
+					}
+				})
+			});
 		}
 	}
 
@@ -129,6 +171,7 @@ impl World {
 			self.chunk_updates.insert(pos.get_chunk_pos().clone());
 		};
 	}
+
 
 	fn update_neighbor<C: NeighborAware>(&mut self, pos: &WorldPos, object: &mut C) where Chunk: Grid<C> {
 		for i in Direction::iter() {
@@ -192,6 +235,10 @@ impl Grid<Tile> for Chunk {
 		&self.solid_tiles
 	}
 
+	fn get_grid_mut(&mut self) -> &mut [[Tile; CHUNK_SIZE]; CHUNK_SIZE] {
+		&mut self.solid_tiles
+	}
+
 	fn set(&mut self, pos: &ChunkSubPos, child: Tile) {
 		self.solid_tiles[pos.y as usize][pos.x as usize] = child;
 	}
@@ -210,6 +257,10 @@ impl Grid<Wall> for Chunk {
 		&self.solid_walls
 	}
 
+	fn get_grid_mut(&mut self) -> &mut [[Wall; CHUNK_SIZE]; CHUNK_SIZE] {
+		&mut self.solid_walls
+	}
+
 	fn set(&mut self, pos: &ChunkSubPos, child: Wall) {
 		self.solid_walls[pos.y as usize][pos.x as usize] = child;
 	}
@@ -221,6 +272,7 @@ pub trait Grid<C> {
 	fn get(&self, pos: &ChunkSubPos) -> &C;
 
 	fn get_grid(&self) -> &[[C; CHUNK_SIZE]; CHUNK_SIZE];
+	fn get_grid_mut(&mut self) -> &mut [[C; CHUNK_SIZE]; CHUNK_SIZE];
 
 	fn set(&mut self, pos: &ChunkSubPos, child: C);
 }

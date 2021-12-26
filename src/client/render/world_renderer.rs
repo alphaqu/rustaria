@@ -81,6 +81,7 @@ impl WorldRenderer {
 	pub fn event_apply(&mut self, control_handler: &ControlHandler) {
 		if let EventType::Toggle { state } = control_handler.acquire(&self.debug_mode_key) {
 			self.debug_mode = *state;
+
 		}
 
 		if let EventType::Toggle { state } = control_handler.acquire(&self.cull_chunks_key) {
@@ -90,6 +91,7 @@ impl WorldRenderer {
 		if let EventType::Request { requests } = control_handler.acquire(&self.rebuild_chunks_key) {
 			if *requests > 0 {
 				self.rebuild_all();
+				println!("Rebuilt chunks");
 			}
 		}
 

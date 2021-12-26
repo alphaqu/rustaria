@@ -1,8 +1,12 @@
-use crate::misc::util::{CHUNK_SIZE, Direction};
-use crate::world::{Chunk, Grid, tile, World};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 use crate::gen::noise::{NoiseGenerator, SUB_BIOME, TERRAIN};
 use crate::misc::pos::{ChunkPos, ChunkSubPos};
+use crate::misc::util::{CHUNK_SIZE, Direction};
+use crate::world::{Chunk, Grid, tile, World};
+use crate::world::neighbor::{NeighborAware, NeighborMatrix};
 use crate::world::tile::Tile;
+use crate::world::wall::Wall;
 
 mod feature;
 mod gen_const;
@@ -15,6 +19,8 @@ pub struct WorldGenerator {
 	cave_height: u32,
 	hell_transition_height: u32,
 	hell_lava: u32,
+
+	queue: Vec<ChunkPos>,
 }
 
 impl WorldGenerator {
@@ -26,14 +32,34 @@ impl WorldGenerator {
 			cave_height: 600,
 			hell_transition_height: 50,
 			hell_lava: 150,
+			queue: Vec::new(),
 		}
 	}
 
-	pub fn gen_chunk(&self, pos: &ChunkPos) -> Chunk {
+	pub fn add_chunk(&mut self, pos: &ChunkPos) {
+		self.queue.push(pos.clone());
+	}
+
+	pub fn generate_chunks(&mut self) -> Option<Vec<(ChunkPos, Chunk)>> {
+		if self.queue.is_empty() {
+			None
+		} else {
+			let chunks = self.queue.par_iter().map(|pos| {
+				(pos.clone(), self.gen_chunk(pos))
+			}).collect();
+			self.queue.clear();
+			Some(chunks)
+		}
+	}
+
+	fn gen_chunk(&self, pos: &ChunkPos) -> Chunk {
 		let mut chunk = Chunk::new();
 		self.generate_terrain(&mut chunk, pos);
+		chunk = Self::calc_internal_neighbors::<Wall, Chunk>(chunk);
+		chunk = Self::calc_internal_neighbors::<Tile, Chunk>(chunk);
 		chunk
 	}
+
 	pub fn generate_terrain(&self, chunk: &mut Chunk, pos: &ChunkPos) {
 		for x in 0..CHUNK_SIZE {
 			let tile_x = (x as i32 + (pos.x as i32 * CHUNK_SIZE as i32)) as i32;
@@ -73,7 +99,47 @@ impl WorldGenerator {
 		}
 	}
 
-	pub fn calc_neighbors(&self, chunk: Chunk, pos: &ChunkPos, world: &mut World) -> Chunk {
-		chunk
+	pub fn calc_internal_neighbors<N: NeighborAware, G: Grid<N>>(owner: G) -> G {
+		let grid = owner.get_grid();
+		// update bottom right neighbors.
+		for y in 0..(CHUNK_SIZE - 1) {
+			let row = &grid[y];
+			let row_below = &grid[y + 1];
+			for x in 0..(CHUNK_SIZE - 1) {
+				let obj = &row[x];
+				let obj_after = &row[x + 1];
+				let obj_below = &row_below[x];
+				unsafe {
+					// mutates the values!!!
+					NeighborMatrix::update_neighbor(obj, obj_after, Direction::Right);
+					NeighborMatrix::update_neighbor(obj, obj_below, Direction::Top);
+				}
+			}
+		};
+
+		// update right row
+		for y in 0..(CHUNK_SIZE - 1) {
+			let row = &grid[y];
+			let row_below = &grid[y + 1];
+			let obj = &row[CHUNK_SIZE - 1];
+			let obj_below = &row_below[CHUNK_SIZE - 1];
+			unsafe {
+				// mutates the values!!!
+				NeighborMatrix::update_neighbor(obj, obj_below, Direction::Top);
+			}
+		};
+
+		// update bottom column
+		for x in 0..(CHUNK_SIZE - 1) {
+			let row = &grid[CHUNK_SIZE - 1];
+			let obj = &row[x];
+			let obj_after = &row[x + 1];
+			unsafe {
+				// mutates the values!!!
+				NeighborMatrix::update_neighbor(obj, obj_after, Direction::Right);
+			}
+		};
+
+		owner
 	}
 }
