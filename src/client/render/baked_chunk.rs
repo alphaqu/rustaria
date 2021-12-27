@@ -29,19 +29,19 @@ impl BakedChunk {
 			let mut builder = ChunkVertexBuilder::new(viewport, pos);
 			let mut vertices = 0u32;
 
-			for y in 0..CHUNK_SIZE {
-				let walls_y: &[Wall; CHUNK_SIZE] = &chunk.get_grid()[y];
-				for x in 0..CHUNK_SIZE {
-					let wall_x = &walls_y[x];
-
-
-					let i = Self::get_variant(pos, y, x);
-					if wall_x.id != wall::AIR {
-						vertices += 6; // quad
-						builder.add_wall(x, y, wall_x, tile_atlas, i);
-					}
-				}
-			}
+			//for y in 0..CHUNK_SIZE {
+			//	let walls_y: &[Wall; CHUNK_SIZE] = &chunk.get_grid()[y];
+			//	for x in 0..CHUNK_SIZE {
+			//		let wall_x = &walls_y[x];
+//
+//
+			//		let i = Self::get_variant(pos, y, x);
+			//		if wall_x.id != wall::AIR {
+			//			vertices += 6; // quad
+			//			builder.add_wall(x, y, wall_x, tile_atlas, i);
+			//		}
+			//	}
+			//}
 
 			for y in 0..CHUNK_SIZE {
 				let tiles_y: &[Tile; CHUNK_SIZE] = &chunk.get_grid()[y];

@@ -72,8 +72,8 @@ impl WorldRenderer {
 			baked_chunks: HashMap::new(),
 			debug_mode: false,
 			cull_chunks: true,
-			debug_mode_key: control_handler.register(Event::new(EventType::new_toggle(), KeyMapping::key(Key::F1), "debug.mode")),
-			cull_chunks_key: control_handler.register(Event::new(EventType::new_toggle(), KeyMapping::key(Key::F2), "debug.cull_chunks")),
+			debug_mode_key: control_handler.register(Event::new(EventType::new_toggle(false), KeyMapping::key(Key::F1), "debug.mode")),
+			cull_chunks_key: control_handler.register(Event::new(EventType::new_toggle(true), KeyMapping::key(Key::F2), "debug.cull_chunks")),
 			rebuild_chunks_key: control_handler.register(Event::new(EventType::new_request(), KeyMapping::key(Key::F3), "debug.rebuild_chunks")),
 		}
 	}
@@ -104,24 +104,23 @@ impl WorldRenderer {
 		settings: &ClientSettings,
 	) {
 		let player_pos = ChunkPos::from_player(player);
-		let render_distance = settings.render_distance;
-		let render_distance_half = (render_distance as i32 / 2i32) as i32;
+		let render_distance = settings.render_distance as i32;
 
 		let mut lookup_pos = player_pos.clone();
-		for y in 0..(render_distance + 1) {
-			let chunk_y: i32 = player_pos.y as i32 + (y as i32 - render_distance_half);
+		 for y in -render_distance..render_distance {
+			let chunk_y: i32 = player_pos.y as i32 + y;
 			if chunk_y < 0 {
 				continue;
 			}
 			lookup_pos.y = chunk_y as u16;
 
-			for x in 0..(render_distance + 1) {
-				lookup_pos.x = (player_pos.x as i32 + (x as i32 - render_distance_half)) as i16;
+			for x in -render_distance..render_distance {
+				lookup_pos.x = (player_pos.x as i32 + x) as i16;
 				if !self.baked_chunks.contains_key(&lookup_pos) {
 					let pos1 = &lookup_pos;
-					BakedChunk::new(viewport, world, pos1, &self.atlas).map(|baked_chunk| {
+					if let Some(baked_chunk) = BakedChunk::new(viewport, world, pos1, &self.atlas) {
 						self.baked_chunks.insert(lookup_pos.clone(), baked_chunk);
-					});
+					}
 				}
 			}
 		}

@@ -20,6 +20,7 @@ impl NoiseLayer {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct NoiseGenerator {
     seed: u64,
     perlin: Perlin,

@@ -17,7 +17,7 @@ pub mod tick;
 pub mod neighbor;
 
 // un hard code this
-const RENDER_DISTANCE: i32 = 4;
+const RENDER_DISTANCE: i32 = 32;
 
 pub struct World {
 	players: HashMap<PlayerId, Player>,
@@ -98,6 +98,11 @@ impl World {
 				let chunk = self.chunks.get(&pos).unwrap();
 				self.update_borders::<Tile>(&pos, chunk);
 				self.update_borders::<Wall>(&pos, chunk);
+				for dir in Direction::iter() {
+					pos.shift(dir).map(|neighbor| {
+						self.chunk_updates.insert(neighbor);
+					});
+				}
 //
 				//// TODO sensei fix this
 				//unsafe {
@@ -111,7 +116,7 @@ impl World {
 				//	}
 				//}
 			}
-			println!("Generated {} chunks in {}ms", length, start.elapsed().as_millis());
+			//println!("Generated {} chunks in {}ms", length, start.elapsed().as_millis());
 		}
 	}
 

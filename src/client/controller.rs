@@ -132,8 +132,8 @@ pub enum EventType {
 }
 
 impl EventType {
-	pub fn new_toggle() -> EventType {
-		EventType::Toggle { state: false }
+	pub fn new_toggle(default: bool) -> EventType {
+		EventType::Toggle { state: default }
 	}
 
 	pub fn new_request() -> EventType {
