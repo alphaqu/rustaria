@@ -43,7 +43,7 @@ impl WorldRenderer {
 
 		println!("Reading images");
 		let mut images = Vec::new();
-		for entry in read_dir(Path::new("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\assets\\sprite\\tile")).unwrap() {
+		for entry in read_dir(Path::new("./assets/sprite/tile")).unwrap() {
 			let dir = entry.unwrap();
 			let buf = dir.path();
 
@@ -51,7 +51,7 @@ impl WorldRenderer {
 			images.push(image);
 		}
 
-		for entry in read_dir(Path::new("C:\\Program Files (x86)\\inkscape\\cppProjects\\rustaria\\assets\\sprite\\wall")).unwrap() {
+		for entry in read_dir(Path::new("./assets/sprite/wall")).unwrap() {
 			let dir = entry.unwrap();
 			let buf = dir.path();
 
