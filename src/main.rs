@@ -41,7 +41,7 @@ fn run_rustaria() {
 fn read_asset_string(path: &str) -> String {
 	let mut file = File::open("./assets/".to_owned() + path).unwrap();
 	let mut string = String::new();
-	file.read_to_string(&mut string);
+	file.read_to_string(&mut string).expect("Could not read file");
 	string
 }
 

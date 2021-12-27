@@ -40,8 +40,7 @@ impl ControlHandler {
 	{
 		for (_, event) in glfw::flush_messages(&self.event_receiver) {
 			match event {
-				WindowEvent::Key(_, _, action, modifiers)
-				| WindowEvent::MouseButton(_, action, modifiers) => {
+				WindowEvent::Key(_, _, action, modifiers) | WindowEvent::MouseButton(_, action, modifiers) => {
 					let mapping = match event {
 						WindowEvent::MouseButton(button, _, _) => {
 							KeyMapping::new_mouse(button, modifiers)

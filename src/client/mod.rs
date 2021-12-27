@@ -204,7 +204,7 @@ impl ClientHandler {
 		let world_renderer = WorldRenderer::new(&mut control_handler);
 
 
-		glfw.set_swap_interval(SwapInterval::Sync(1));
+//		glfw.set_swap_interval(SwapInterval::Sync(1));
 		println!("Finishing");
 		gl::clear_color(0.5f32, 0.6f32, 0.98f32, 1f32);
 		gl::viewport(0, 0, 900, 600);
