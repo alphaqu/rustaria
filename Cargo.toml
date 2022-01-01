@@ -3,9 +3,9 @@ name = "rustaria"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+profiler_macro = { path = "profiler_macro" }
+profiler_service = { path = "profiler_service" }
 glfw = "0.43.0"
 opengl-raw = { path = "./opengl-raw" }
 rectangle-pack = "0.4.2"

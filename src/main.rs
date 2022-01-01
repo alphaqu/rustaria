@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::ops::Div;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::client::ClientHandler;
 use crate::player::Player;
@@ -17,7 +17,20 @@ mod gen;
 mod local;
 
 fn main() {
+    profiler_service::profile();
     run_rustaria();
+    profiler_service::print();
+}
+
+#[profiler_macro::profile]
+fn test() {
+    std::thread::sleep(Duration::from_millis(1000));
+}
+
+#[profiler_macro::profile]
+fn test_return() -> u32 {
+    std::thread::sleep(Duration::from_millis(1000));
+    69420
 }
 
 
@@ -82,6 +95,8 @@ struct Profiler {
 impl Profiler {
     pub fn update(&mut self) {
         if self.last_update.elapsed().as_millis() > MS_PER_PROFILE_PRINT {
+            profiler_service::print();
+
             let multiplier = (1000 / MS_PER_PROFILE_PRINT) as u32;
             println!("(fps/mspf|ups/mspu) {fps}/{mspf}ms | {ups}/{mspu}ms",
                      // Frames per second

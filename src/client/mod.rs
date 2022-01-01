@@ -35,6 +35,7 @@ pub struct ClientHandler {
 
 impl ClientHandler  {
     // viewport: &Viewport, player: &Player, world: &mut World
+    #[profiler_macro::profile]
     pub fn draw(&mut self) {
         gl::clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
         match &mut self.world {
@@ -51,17 +52,18 @@ impl ClientHandler  {
         self.window.swap_buffers();
     }
 
+    #[profiler_macro::profile]
     pub fn input_tick(&mut self) {
         self.events();
     }
 
+    #[profiler_macro::profile]
     pub fn tick(&mut self) {
         match &mut self.world {
             None => {}
             Some(world) => {
-                world.tick();
-                self.world_renderer.tick(world, &self.viewport, world.acquire_player(&self.player_id), &self.settings);
-
+                world.tick_world();
+                self.world_renderer.tick_world_renderer(world, &self.viewport, world.acquire_player(&self.player_id), &self.settings);
             }
         };
     }
