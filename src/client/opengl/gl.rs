@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::ffi::{c_void, CString};
+use std::ffi::{c_void, CStr, CString};
+use std::os::raw::c_char;
 use std::ptr;
 
 use opengl_raw::gll;
 use opengl_raw::gll::{CompileShader, GetShaderiv};
-use opengl_raw::gll::types::{GLboolean, GLenum, GLint, GLuint, GLuint64, GLvoid};
+use opengl_raw::gll::types::{GLboolean, GLchar, GLDEBUGPROC, GLenum, GLint, GLsizei, GLuint, GLuint64, GLvoid};
+
 
 pub const ACTIVE_ATOMIC_COUNTER_BUFFERS: u32 = 0x92D9;
 pub const ACTIVE_ATTRIBUTES: u32 = 0x8B89;
@@ -1356,375 +1358,388 @@ pub const ZERO: u32 = 0;
 pub const ZERO_TO_ONE: u32 = 0x935F;
 
 pub fn clear_color(red: f32, green: f32, blue: f32, alpha: f32) {
-	unsafe { gll::ClearColor(red, green, blue, alpha); }
+    unsafe { gll::ClearColor(red, green, blue, alpha); }
 }
 
 pub fn clear(bits: u32) {
-	unsafe { gll::Clear(bits); }
+    unsafe { gll::Clear(bits); }
 }
 
 pub fn viewport(x: i32, y: i32, width: i32, height: i32) {
-	unsafe { gll::Viewport(x, y, width, height); }
+    unsafe { gll::Viewport(x, y, width, height); }
 }
 
 pub fn enable(option: GLenum) {
-	unsafe { gll::Enable(option); }
+    unsafe { gll::Enable(option); }
 }
 
+// glDebugMessageCallback
+pub fn debug_message_callback() {
+    unsafe {
+        println!("DEBUG MESSAGES ON");
+        gll::DebugMessageCallback(Some(gl_debug_callback), 1 as *const c_void);
+    }
+}
+
+
+// glDebugMessageInsert
+pub fn debug_message_insert(source: GLenum, error_type: GLenum, id: u32, severity: GLenum, message: &str) {
+    unsafe {
+        let str = str_to_cstr(message.to_owned());
+        gll::DebugMessageInsert(source, error_type, id, severity, message.len() as GLsizei, str.as_ptr())
+    }
+}
+
+pub fn get_error() -> GLenum {
+    unsafe {
+        gll::GetError()
+    }
+}
+
+pub extern "system" fn gl_debug_callback(source: GLenum,
+                                         type_bruh: GLenum,
+                                         id: GLuint,
+                                         severity: GLenum,
+                                         length: GLsizei,
+                                         message: *const GLchar,
+                                         user_param: *mut c_void)
+{
+    panic!("your mom");
+    let out = message as *mut gll::types::GLchar;
+    let out2 = unsafe { CString::from_raw(out) };
+
+
+    println!("OpenGL Internal Error: {:?} ", out2.as_c_str());
+}
+
+
 pub fn disable(option: GLenum) {
-	unsafe { gll::Disable(option); }
+    unsafe { gll::Disable(option); }
 }
 
 pub fn cull_face(option: GLenum) {
-	unsafe { gll::CullFace(option); }
+    unsafe { gll::CullFace(option); }
 }
 
 pub fn front_face(option: GLenum) {
-	unsafe { gll::FrontFace(option); }
+    unsafe { gll::FrontFace(option); }
 }
 
 pub fn blend_func(sfactor: GLenum, dfactor: GLenum) {
-	unsafe { gll::BlendFunc(sfactor, dfactor); }
+    unsafe { gll::BlendFunc(sfactor, dfactor); }
 }
 
 pub fn gen_vertex_arrays() -> GLuint {
-	let mut id: gll::types::GLuint = 0;
-	unsafe { gll::GenVertexArrays(1, &mut id) }
-	id
+    let mut id: gll::types::GLuint = 0;
+    unsafe { gll::GenVertexArrays(1, &mut id) }
+    id
 }
 
+#[derive(Copy, Clone)]
 pub enum BufferType {
-	ArrayBuffer,
-	AtomicCounterBuffer,
-	CopyReadBuffer,
-	CopyWriteBuffer,
-	DispatchIndirectBuffer,
-	DrawIndirectBuffer,
-	ElementArrayBuffer,
-	PixelPackBuffer,
-	PixelUnpackBuffer,
-	QueryBuffer,
-	ShaderStorageBuffer,
-	TextureBuffer,
-	TransformFeedbackBuffer,
-	UniformBuffer,
+    ArrayBuffer,
+    AtomicCounterBuffer,
+    CopyReadBuffer,
+    CopyWriteBuffer,
+    DispatchIndirectBuffer,
+    DrawIndirectBuffer,
+    ElementArrayBuffer,
+    PixelPackBuffer,
+    PixelUnpackBuffer,
+    QueryBuffer,
+    ShaderStorageBuffer,
+    TextureBuffer,
+    TransformFeedbackBuffer,
+    UniformBuffer,
 }
 
 impl BufferType {
-	pub fn get(&self) -> u32 {
-		match self {
-			BufferType::ArrayBuffer => ARRAY_BUFFER,
-			BufferType::AtomicCounterBuffer => ATOMIC_COUNTER_BUFFER,
-			BufferType::CopyReadBuffer => COPY_READ_BUFFER,
-			BufferType::CopyWriteBuffer => COPY_WRITE_BUFFER,
-			BufferType::DispatchIndirectBuffer => DISPATCH_INDIRECT_BUFFER,
-			BufferType::DrawIndirectBuffer => DRAW_INDIRECT_BUFFER,
-			BufferType::ElementArrayBuffer => ELEMENT_ARRAY_BUFFER,
-			BufferType::PixelPackBuffer => PIXEL_PACK_BUFFER,
-			BufferType::PixelUnpackBuffer => PIXEL_UNPACK_BUFFER,
-			BufferType::QueryBuffer => QUERY_BUFFER,
-			BufferType::ShaderStorageBuffer => SHADER_STORAGE_BUFFER,
-			BufferType::TextureBuffer => TEXTURE_BUFFER,
-			BufferType::TransformFeedbackBuffer => TRANSFORM_FEEDBACK_BUFFER,
-			BufferType::UniformBuffer => UNIFORM_BUFFER,
-		}
-	}
+    pub fn get(&self) -> u32 {
+        match self {
+            BufferType::ArrayBuffer => ARRAY_BUFFER,
+            BufferType::AtomicCounterBuffer => ATOMIC_COUNTER_BUFFER,
+            BufferType::CopyReadBuffer => COPY_READ_BUFFER,
+            BufferType::CopyWriteBuffer => COPY_WRITE_BUFFER,
+            BufferType::DispatchIndirectBuffer => DISPATCH_INDIRECT_BUFFER,
+            BufferType::DrawIndirectBuffer => DRAW_INDIRECT_BUFFER,
+            BufferType::ElementArrayBuffer => ELEMENT_ARRAY_BUFFER,
+            BufferType::PixelPackBuffer => PIXEL_PACK_BUFFER,
+            BufferType::PixelUnpackBuffer => PIXEL_UNPACK_BUFFER,
+            BufferType::QueryBuffer => QUERY_BUFFER,
+            BufferType::ShaderStorageBuffer => SHADER_STORAGE_BUFFER,
+            BufferType::TextureBuffer => TEXTURE_BUFFER,
+            BufferType::TransformFeedbackBuffer => TRANSFORM_FEEDBACK_BUFFER,
+            BufferType::UniformBuffer => UNIFORM_BUFFER,
+        }
+    }
 }
 
 
 pub enum DataType {
-	IByte,
-	UByte,
-	IShort,
-	UShort,
-	IInt,
-	UInt,
-	Float,
-	Double,
+    Bool,
+    IByte,
+    UByte,
+    IShort,
+    UShort,
+    IInt,
+    UInt,
+    Float,
+    Double,
 }
 
 impl DataType {
-	pub fn get(&self) -> u32 {
-		match self {
-			DataType::IByte => BYTE,
-			DataType::UByte => UNSIGNED_BYTE,
-			DataType::IShort => SHORT,
-			DataType::UShort => UNSIGNED_SHORT,
-			DataType::IInt => INT,
-			DataType::UInt => UNSIGNED_INT,
-			DataType::Float => FLOAT,
-			DataType::Double => DOUBLE,
-		}
-	}
-	pub fn get_size(&self) -> i32 {
-		match self {
-			DataType::IByte => 1,
-			DataType::UByte => 1,
-			DataType::IShort => 2,
-			DataType::UShort => 2,
-			DataType::IInt => 4,
-			DataType::UInt => 4,
-			DataType::Float => 4,
-			DataType::Double => 8,
-		}
-	}
+    pub fn get(&self) -> u32 {
+        match self {
+            DataType::Bool => BOOL,
+            DataType::IByte => BYTE,
+            DataType::UByte => UNSIGNED_BYTE,
+            DataType::IShort => SHORT,
+            DataType::UShort => UNSIGNED_SHORT,
+            DataType::IInt => INT,
+            DataType::UInt => UNSIGNED_INT,
+            DataType::Float => FLOAT,
+            DataType::Double => DOUBLE,
+        }
+    }
+    pub fn get_size(&self) -> i32 {
+        match self {
+            DataType::Bool => 1,
+            DataType::IByte => 1,
+            DataType::UByte => 1,
+            DataType::IShort => 2,
+            DataType::UShort => 2,
+            DataType::IInt => 4,
+            DataType::UInt => 4,
+            DataType::Float => 4,
+            DataType::Double => 8,
+        }
+    }
 }
 
-pub fn bind_buffer(buffer_type: &BufferType, buffer_id: &GLuint) {
-	unsafe {
-		gll::BindBuffer(buffer_type.get(), *buffer_id);
-	}
+pub fn bind_buffer(buffer_type: BufferType, buffer_id: Option<GLuint>) {
+    unsafe {
+        gll::BindBuffer(buffer_type.get(), buffer_id.unwrap_or(0));
+    }
 }
 
-pub fn vertex_attrib_pointer(index: u32, size: i32, data: &DataType, normalized: bool, stride: i32) {
-	unsafe {
-		let pointer = std::ptr::null();
-		gll::VertexAttribPointer(index, size, data.get(), GLboolean::from(normalized), stride, pointer);
-	}
+pub fn bind_vertex_array(array_id: Option<GLuint>) {
+    unsafe {
+
+        gll::BindVertexArray(array_id.unwrap_or(0));
+    }
+}
+
+pub fn vertex_attrib_pointer(index: u32, size: i32, data: &DataType, normalized: bool, stride: i32, offset: i32) {
+    unsafe {
+        gll::VertexAttribPointer(index, size, data.get(), GLboolean::from(normalized), stride, offset as *const c_void);
+    }
+}
+
+// glGetAttribLocation
+pub fn get_attrib_location(program_id: GLuint, name: &str) -> i32 {
+    unsafe {
+        gll::GetAttribLocation(program_id, str_to_cstr(name.to_owned()).as_ptr())
+    }
 }
 
 // glVertexAttribDivisor
 pub enum VertexDivisor {
-	Vertex,
-	Instance,
-	Instance2,
+    Vertex,
+    Instance,
+    Instance2,
 }
 
 impl VertexDivisor {
-	pub fn get(&self) -> GLuint {
-		match self {
-			VertexDivisor::Vertex => 0,
-			VertexDivisor::Instance => 1,
-			VertexDivisor::Instance2 => 2,
-		}
-	}
+    pub fn get(&self) -> GLuint {
+        match self {
+            VertexDivisor::Vertex => 0,
+            VertexDivisor::Instance => 1,
+            VertexDivisor::Instance2 => 2,
+        }
+    }
 }
 
 pub fn vertex_attrib_divisor(index: u32, divisor: VertexDivisor) {
-	unsafe {
-		gll::VertexAttribDivisor(index, divisor.get());
-	}
+    unsafe {
+        gll::VertexAttribDivisor(index, divisor.get());
+    }
 }
 
 pub fn draw_arrays(draw_type: GLenum, offset: i32, count: i32) {
-	unsafe {
-		gll::DrawArrays(draw_type, offset, count)
-	}
+    unsafe {
+        gll::DrawArrays(draw_type, offset, count)
+    }
 }
 
 //glDrawElementsInstanced
 pub fn draw_arrays_instanced(draw_type: GLenum, offset: i32, count: i32, elements: i32) {
-	unsafe {
-		gll::DrawArraysInstanced(draw_type, offset, count, elements)
-	}
-}
-
-pub fn bind_vertex_array(array_id: &GLuint) {
-	unsafe {
-		gll::BindVertexArray(*array_id);
-	}
+    unsafe {
+        gll::DrawArraysInstanced(draw_type, offset, count, elements)
+    }
 }
 
 pub fn enable_vertex_attribute_array(index: u32) {
-	unsafe {
-		gll::EnableVertexAttribArray(index);
-	}
+    unsafe {
+        gll::EnableVertexAttribArray(index);
+    }
 }
 
 pub fn disable_vertex_attribute_array(index: u32) {
-	unsafe {
-		gll::DisableVertexAttribArray(index);
-	}
+    unsafe {
+        gll::DisableVertexAttribArray(index);
+    }
 }
 
 //glDeleteBuffers
 pub fn delete_buffer(id: GLuint) {
-	delete_buffers(1, id);
+    delete_buffers(1, id);
 }
 
 
 pub fn delete_buffers(amount: i32, id: GLuint) {
-	unsafe {
-		gll::DeleteBuffers(amount, &id);
-	}
+    unsafe {
+        gll::DeleteBuffers(amount, &id);
+    }
 }
 
 
 //glDeleteVertexArrays
 pub fn delete_vertex_array(id: GLuint) {
-	delete_vertex_arrays(1, id);
+    delete_vertex_arrays(1, id);
 }
 
 pub fn delete_vertex_arrays(amount: i32, id: GLuint) {
-	unsafe {
-		gll::DeleteVertexArrays(amount, &id);
-	}
+    unsafe {
+        gll::DeleteVertexArrays(amount, &id);
+    }
 }
 
 // Uniforms
 // glGetUniformLocation
 pub fn get_uniform_location(program_id: GLuint, uniform_name: &str) -> i32 {
-	unsafe {
-		gll::GetUniformLocation(program_id, str_to_cstr(uniform_name.to_string()).as_ptr())
-	}
+    unsafe {
+        gll::GetUniformLocation(program_id, str_to_cstr(uniform_name.to_string()).as_ptr())
+    }
 }
 
 pub fn uniform_1d(location: GLint, v0: f64) {
-	unsafe {
-		gll::Uniform1d(location, v0);
-	}
+    unsafe {
+        gll::Uniform1d(location, v0);
+    }
 }
 
 pub fn uniform_1f(location: GLint, v0: f32) {
-	unsafe {
-		gll::Uniform1f(location, v0);
-	}
+    unsafe {
+        gll::Uniform1f(location, v0);
+    }
 }
 
 pub fn uniform_1i(location: GLint, v0: i32) {
-	unsafe {
-		gll::Uniform1i(location, v0);
-	}
+    unsafe {
+        gll::Uniform1i(location, v0);
+    }
 }
 
 pub fn uniform_1ui(location: GLint, v0: u32) {
-	unsafe {
-		gll::Uniform1ui(location, v0);
-	}
+    unsafe {
+        gll::Uniform1ui(location, v0);
+    }
 }
 
 pub fn uniform_2d(location: GLint, v0: f64, v1: f64) {
-	unsafe {
-		gll::Uniform2d(location, v0, v1);
-	}
+    unsafe {
+        gll::Uniform2d(location, v0, v1);
+    }
 }
 
 pub fn uniform_2f(location: GLint, v0: f32, v1: f32) {
-	unsafe {
-		gll::Uniform2f(location, v0, v1);
-	}
+    unsafe {
+        gll::Uniform2f(location, v0, v1);
+    }
 }
 
 pub fn uniform_2i(location: GLint, v0: i32, v1: i32) {
-	unsafe {
-		gll::Uniform2i(location, v0, v1);
-	}
+    unsafe {
+        gll::Uniform2i(location, v0, v1);
+    }
 }
 
 pub fn uniform_2ui(location: GLint, v0: u32, v1: u32) {
-	unsafe {
-		gll::Uniform2ui(location, v0, v1);
-	}
+    unsafe {
+        gll::Uniform2ui(location, v0, v1);
+    }
 }
 
 pub fn uniform_3d(location: GLint, v0: f64, v1: f64, v2: f64) {
-	unsafe {
-		gll::Uniform3d(location, v0, v1, v2);
-	}
+    unsafe {
+        gll::Uniform3d(location, v0, v1, v2);
+    }
 }
 
 pub fn uniform_3f(location: GLint, v0: f32, v1: f32, v2: f32) {
-	unsafe {
-		gll::Uniform3f(location, v0, v1, v2);
-	}
+    unsafe {
+        gll::Uniform3f(location, v0, v1, v2);
+    }
 }
 
 pub fn uniform_3i(location: GLint, v0: i32, v1: i32, v2: i32) {
-	unsafe {
-		gll::Uniform3i(location, v0, v1, v2);
-	}
+    unsafe {
+        gll::Uniform3i(location, v0, v1, v2);
+    }
 }
 
 pub fn uniform_3ui(location: GLint, v0: u32, v1: u32, v2: u32) {
-	unsafe {
-		gll::Uniform3ui(location, v0, v1, v2);
-	}
+    unsafe {
+        gll::Uniform3ui(location, v0, v1, v2);
+    }
 }
 
 pub fn uniform_4d(location: GLint, v0: f64, v1: f64, v2: f64, v3: f64) {
-	unsafe {
-		gll::Uniform4d(location, v0, v1, v2, v3);
-	}
+    unsafe {
+        gll::Uniform4d(location, v0, v1, v2, v3);
+    }
 }
 
 pub fn uniform_4f(location: GLint, v0: f32, v1: f32, v2: f32, v3: f32) {
-	unsafe {
-		gll::Uniform4f(location, v0, v1, v2, v3);
-	}
+    unsafe {
+        gll::Uniform4f(location, v0, v1, v2, v3);
+    }
 }
 
 pub fn uniform_4i(location: GLint, v0: i32, v1: i32, v2: i32, v3: i32) {
-	unsafe {
-		gll::Uniform4i(location, v0, v1, v2, v3);
-	}
+    unsafe {
+        gll::Uniform4i(location, v0, v1, v2, v3);
+    }
 }
 
 pub fn uniform_4ui(location: GLint, v0: u32, v1: u32, v2: u32, v3: u32) {
-	unsafe {
-		gll::Uniform4ui(location, v0, v1, v2, v3);
-	}
+    unsafe {
+        gll::Uniform4ui(location, v0, v1, v2, v3);
+    }
 }
 
 pub fn gen_buffer() -> GLuint {
-	gen_buffers(1)
+    gen_buffers(1)
 }
 
 pub fn gen_buffers(amount: i32) -> GLuint {
-	unsafe {
-		let mut id: GLuint = 0;
-		gll::GenBuffers(amount, &mut id);
-		id
-	}
-}
-
-pub enum BufferTarget {
-	ArrayBuffer,
-	AtomicCounterBuffer,
-	CopyReadBuffer,
-	CopyWriteBuffer,
-	DispatchIndirectBuffer,
-	DrawIndirectBuffer,
-	ElementArrayBuffer,
-	PixelPackBuffer,
-	PixelUnpackBuffer,
-	QueryBuffer,
-	ShaderStorageBuffer,
-	TextureBuffer,
-	TransformFeedbackBuffer,
-	UniformBuffer,
-}
-
-impl BufferTarget {
-	pub fn get(&self) -> u32 {
-		match self {
-			BufferTarget::ArrayBuffer => ARRAY_BUFFER,
-			BufferTarget::AtomicCounterBuffer => ATOMIC_COUNTER_BUFFER,
-			BufferTarget::CopyReadBuffer => COPY_READ_BUFFER,
-			BufferTarget::CopyWriteBuffer => COPY_WRITE_BUFFER,
-			BufferTarget::DispatchIndirectBuffer => DISPATCH_INDIRECT_BUFFER,
-			BufferTarget::DrawIndirectBuffer => DRAW_INDIRECT_BUFFER,
-			BufferTarget::ElementArrayBuffer => ELEMENT_ARRAY_BUFFER,
-			BufferTarget::PixelPackBuffer => PIXEL_PACK_BUFFER,
-			BufferTarget::PixelUnpackBuffer => PIXEL_UNPACK_BUFFER,
-			BufferTarget::QueryBuffer => QUERY_BUFFER,
-			BufferTarget::ShaderStorageBuffer => SHADER_STORAGE_BUFFER,
-			BufferTarget::TextureBuffer => TEXTURE_BUFFER,
-			BufferTarget::TransformFeedbackBuffer => TRANSFORM_FEEDBACK_BUFFER,
-			BufferTarget::UniformBuffer => UNIFORM_BUFFER,
-		}
-	}
+    unsafe {
+        let mut id: GLuint = 0;
+        gll::GenBuffers(amount, &mut id);
+        id
+    }
 }
 
 pub enum BufferUsage {
-	StreamDraw,
-	StreamRead,
-	StreamCopy,
-	StaticDraw,
-	StaticRead,
-	StaticCopy,
-	DynamicDraw,
-	DynamicRead,
-	DynamicCopy,
+    StreamDraw,
+    StreamRead,
+    StreamCopy,
+    StaticDraw,
+    StaticRead,
+    StaticCopy,
+    DynamicDraw,
+    DynamicRead,
+    DynamicCopy,
 }
 
 //     --red: #ff6188;
@@ -1744,216 +1759,283 @@ pub enum BufferUsage {
 //     --base8: #fcfcfa;
 
 impl BufferUsage {
-	pub fn get(&self) -> u32 {
-		match self {
-			BufferUsage::StreamDraw => STREAM_DRAW,
-			BufferUsage::StreamRead => STREAM_READ,
-			BufferUsage::StreamCopy => STREAM_COPY,
-			BufferUsage::StaticDraw => STATIC_DRAW,
-			BufferUsage::StaticRead => STATIC_READ,
-			BufferUsage::StaticCopy => STATIC_COPY,
-			BufferUsage::DynamicDraw => DYNAMIC_DRAW,
-			BufferUsage::DynamicRead => DYNAMIC_READ,
-			BufferUsage::DynamicCopy => DYNAMIC_COPY,
-		}
-	}
+    pub fn get(&self) -> u32 {
+        match self {
+            BufferUsage::StreamDraw => STREAM_DRAW,
+            BufferUsage::StreamRead => STREAM_READ,
+            BufferUsage::StreamCopy => STREAM_COPY,
+            BufferUsage::StaticDraw => STATIC_DRAW,
+            BufferUsage::StaticRead => STATIC_READ,
+            BufferUsage::StaticCopy => STATIC_COPY,
+            BufferUsage::DynamicDraw => DYNAMIC_DRAW,
+            BufferUsage::DynamicRead => DYNAMIC_READ,
+            BufferUsage::DynamicCopy => DYNAMIC_COPY,
+        }
+    }
 }
 
-pub fn buffer_data_vec<T>(target: BufferTarget, vec: &Vec<T>, usage: BufferUsage) {
-	unsafe {
-		gll::BufferData(
-			target.get(),
-			(vec.len() * std::mem::size_of::<T>()) as gll::types::GLsizeiptr,
-			vec.as_ptr() as *const gll::types::GLvoid,
-			usage.get(),
-		);
-	}
+pub fn buffer_data_vec<T>(target: BufferType, vec: &Vec<T>, usage: BufferUsage) {
+    unsafe {
+        gll::BufferData(
+            target.get(),
+            (vec.len() * std::mem::size_of::<T>()) as gll::types::GLsizeiptr,
+            vec.as_ptr() as *const gll::types::GLvoid,
+            usage.get(),
+        );
+    }
 }
 
-pub fn buffer_data<T>(target: BufferTarget, size: usize, data: Option<Vec<T>>, usage: BufferUsage) {
-	unsafe {
-		let data = match data {
-			None => ptr::null(),
-			Some(obj) => obj.as_ptr() as *const gll::types::GLvoid
-		};
-		gll::BufferData(
-			target.get(),
-			size as gll::types::GLsizeiptr,
-			data,
-			usage.get(),
-		);
-	}
+pub fn buffer_data<T>(target: BufferType, size: usize, data: Option<Vec<T>>, usage: BufferUsage) {
+    unsafe {
+        let data = match data {
+            None => ptr::null(),
+            Some(obj) => obj.as_ptr() as *const gll::types::GLvoid
+        };
+        gll::BufferData(
+            target.get(),
+            size as gll::types::GLsizeiptr,
+            data,
+            usage.get(),
+        );
+    }
 }
 
 // glGetTexImage
 pub fn get_tex_image(target: GLenum, level: GLint, gl_format: GLenum, width: u32, height: u32, border: i32, pixel_format: GLenum) {
-	unsafe {
-		gll::GetTexImage(target, level, gl_format, pixel_format, 0 as *mut GLvoid);
-	}
+    unsafe {
+        gll::GetTexImage(target, level, gl_format, pixel_format, 0 as *mut GLvoid);
+    }
 }
 
 pub fn get_buffer_subdata<T>(target: GLenum, offset: usize, size: usize, vec: &mut Vec<T>) {
-	unsafe {
-		gll::GetBufferSubData(target, offset as isize, size as isize, vec.as_mut_ptr() as *mut gll::types::GLvoid);
-	}
+    unsafe {
+        gll::GetBufferSubData(target, offset as isize, size as isize, vec.as_mut_ptr() as *mut gll::types::GLvoid);
+    }
 }
 
 pub fn create_program() -> GLuint {
-	unsafe { gll::CreateProgram() }
+    unsafe { gll::CreateProgram() }
 }
 
 pub fn delete_program(program_id: GLuint) {
-	unsafe { gll::DeleteProgram(program_id) }
+    unsafe { gll::DeleteProgram(program_id) }
 }
 
 pub fn create_shader(shader: u32) -> GLuint {
-	unsafe { gll::CreateShader(shader) }
+    unsafe { gll::CreateShader(shader) }
 }
 
 pub fn shader_source(shader_id: GLuint, code: String) {
-	unsafe {
-		let str = str_to_cstr(code);
-		gll::ShaderSource(shader_id, 1, &str.as_ptr(), std::ptr::null())
-	}
+    unsafe {
+        let str = str_to_cstr(code);
+        gll::ShaderSource(shader_id, 1, &str.as_ptr(), std::ptr::null())
+    }
 }
 
 pub fn compile_shader(shader_id: GLuint, program_id: GLuint) {
-	unsafe {
-		CompileShader(shader_id);
-		let mut success: gll::types::GLint = 1;
+    unsafe {
+        CompileShader(shader_id);
+        let mut success: gll::types::GLint = 1;
 
-		GetShaderiv(shader_id, gll::COMPILE_STATUS, &mut success);
-		if success == 0 {
-			let mut len: GLint = 0;
-			gll::GetShaderiv(shader_id, gll::INFO_LOG_LENGTH, &mut len);
+        GetShaderiv(shader_id, gll::COMPILE_STATUS, &mut success);
+        if success == 0 {
+            let mut len: GLint = 0;
+            gll::GetShaderiv(shader_id, gll::INFO_LOG_LENGTH, &mut len);
 
-			let error = create_cstring(len as usize);
+            let error = create_cstring(len as usize);
 
-			gll::GetShaderInfoLog(
-				shader_id,
-				len,
-				std::ptr::null_mut(),
-				error.as_ptr() as *mut gll::types::GLchar,
-			);
+            gll::GetShaderInfoLog(
+                shader_id,
+                len,
+                std::ptr::null_mut(),
+                error.as_ptr() as *mut gll::types::GLchar,
+            );
 
-			panic!("Could not compile shader: {}", error.to_string_lossy().into_owned());
-		}
-	}
+            panic!("Could not compile shader: {}", error.to_string_lossy().into_owned());
+        }
+    }
 }
+
+// glGetShaderiv
+pub fn get_shader_iv(shader_id: GLuint, parameter: GLenum) -> GLint {
+    unsafe {
+        let mut value: gll::types::GLint = 1;
+        gll::GetShaderiv(shader_id, parameter, &mut value);
+        value
+    }
+}
+
+pub fn get_shader_info_log(shader_id: GLuint) -> String {
+    unsafe {
+        let len: GLint = get_shader_iv(shader_id, gll::INFO_LOG_LENGTH);
+
+        let str = create_cstring(len as usize);
+        gll::GetShaderInfoLog(shader_id, len, std::ptr::null_mut(), str.as_ptr() as *mut gll::types::GLchar);
+        str.to_string_lossy().into_owned()
+    }
+}
+
+// glGetProgramiv
+pub fn get_program_iv(program_id: GLuint, parameter: GLenum) -> GLint {
+    unsafe {
+        let mut value: gll::types::GLint = 1;
+        gll::GetProgramiv(program_id, parameter, &mut value);
+        value
+    }
+}
+
+pub fn get_program_info_log(program_id: GLuint) -> String {
+    unsafe {
+        let len: GLint = get_program_iv(program_id, gll::INFO_LOG_LENGTH);
+
+        let str = create_cstring(len as usize);
+        gll::GetProgramInfoLog(program_id, len, std::ptr::null_mut(), str.as_ptr() as *mut gll::types::GLchar);
+        str.to_string_lossy().into_owned()
+    }
+}
+
+// glGetActiveAttrib
+pub fn get_active_attrib(program_id: GLuint, index: u32, max_size: i32) -> (GLint, GLenum, String) {
+    unsafe {
+        let mut length: gll::types::GLint = 1;
+        let mut var_size: gll::types::GLint = 1;
+        let mut var_type: gll::types::GLenum = 1;
+
+        let str = create_cstring(16);
+        let name = str.into_raw();
+        gll::GetActiveAttrib(program_id, index, max_size, &mut length, &mut var_size, &mut var_type, name);
+        (var_size, var_type, String::from_utf8(Vec::from(CString::from_raw(name) )).unwrap())
+    }
+}
+
+// glGetActiveUniform
+pub fn get_active_uniform(program_id: GLuint, index: u32, max_size: i32) -> (GLint, GLenum, String) {
+    unsafe {
+        let mut length: gll::types::GLint = 1;
+        let mut var_size: gll::types::GLint = 1;
+        let mut var_type: gll::types::GLenum = 1;
+
+        let str = create_cstring(16);
+        let name = str.into_raw();
+        gll::GetActiveUniform(program_id, index, max_size, &mut length, &mut var_size, &mut var_type, name);
+        (var_size, var_type, String::from_utf8(Vec::from(CString::from_raw(name) )).unwrap())
+    }
+}
+
 
 //glLinkProgram
 pub fn link_program(program_id: GLuint) {
-	unsafe { gll::LinkProgram(program_id) }
+    unsafe { gll::LinkProgram(program_id) }
 }
 
 //glUseProgram
-pub fn use_program(program_id: GLuint) {
-	unsafe { gll::UseProgram(program_id) }
+pub fn use_program(program_id: Option<GLuint>) {
+    unsafe { gll::UseProgram(program_id.unwrap_or(0)) }
 }
 
 // glValidateProgram
 pub fn validate_program(program_id: GLuint) {
-	unsafe { gll::ValidateProgram(program_id) }
+    unsafe { gll::ValidateProgram(program_id) }
 }
 
 
 pub fn detach_shader(program_id: GLuint, shader_id: GLuint) {
-	unsafe {
-		gll::DetachShader(program_id, shader_id);
-	}
+    unsafe {
+        gll::DetachShader(program_id, shader_id);
+    }
 }
 
 pub fn attach_shader(program_id: GLuint, shader_id: GLuint) {
-	unsafe {
-		gll::AttachShader(program_id, shader_id);
-	}
+    unsafe {
+        gll::AttachShader(program_id, shader_id);
+    }
 }
 
 fn create_cstring(len: usize) -> CString {
-	// allocate buffer of correct size
-	let mut buffer: Vec<u8> = Vec::with_capacity(len + 1);
-	// fill it with len spaces
-	buffer.extend([b' '].iter().cycle().take(len));
-	// convert buffer to CString
-	unsafe { CString::from_vec_unchecked(buffer) }
+    // allocate buffer of correct size
+    let mut buffer: Vec<u8> = Vec::with_capacity(len + 1);
+    // fill it with len spaces
+    buffer.extend([b' '].iter().cycle().take(len));
+    // convert buffer to CString
+    unsafe { CString::from_vec_unchecked(buffer) }
 }
 
 // glGenTextures
 pub fn gen_texture() -> GLuint {
-	unsafe {
-		let mut id: GLuint = 0;
-		gll::GenTextures(1, &mut id);
-		id
-	}
+    unsafe {
+        let mut id: GLuint = 0;
+        gll::GenTextures(1, &mut id);
+        id
+    }
 }
 
 // glBindTexture
 pub fn bind_texture(target: GLenum, id: GLuint) {
-	unsafe {
-		gll::BindTexture(target, id);
-	}
+    unsafe {
+        gll::BindTexture(target, id);
+    }
 }
 
 // glActiveTexture
 pub fn active_texture(texture: GLenum) {
-	unsafe {
-		gll::ActiveTexture(texture);
-	}
+    unsafe {
+        gll::ActiveTexture(texture);
+    }
 }
 
 // glTexImage2D
 pub fn tex_image_2d(target: GLenum, level: GLint, gl_format: GLenum, width: u32, height: u32, border: i32, image_format: GLenum, pixel_format: GLenum, pixels: Option<&Vec<u8>>) {
-	unsafe {
-		let pixels = match pixels {
-			None => ptr::null(),
-			Some(data) => data.as_ptr() as *const c_void
-		};
-		gll::TexImage2D(target, level, gl_format as GLint, width as i32, height as i32, border, image_format, pixel_format, pixels)
-	}
+    unsafe {
+        let pixels = match pixels {
+            None => ptr::null(),
+            Some(data) => data.as_ptr() as *const c_void
+        };
+        gll::TexImage2D(target, level, gl_format as GLint, width as i32, height as i32, border, image_format, pixel_format, pixels)
+    }
 }
 
 // glGenerateMipmap
 pub fn generate_mipmap(target: GLenum) {
-	unsafe {
-		gll::GenerateMipmap(target)
-	}
+    unsafe {
+        gll::GenerateMipmap(target)
+    }
 }
 
 
 // glTexImage2D
 pub fn tex_sub_image_2d<T>(target: GLenum, level: GLint, x: u32, y: u32, width: u32, height: u32, image_format: GLenum, pixel_format: GLenum, pixels: *const T) {
-	unsafe {
-		gll::TexSubImage2D(target, level, x as i32, y as i32, width as i32, height as i32, image_format, pixel_format, pixels as *const c_void)
-	}
+    unsafe {
+        gll::TexSubImage2D(target, level, x as i32, y as i32, width as i32, height as i32, image_format, pixel_format, pixels as *const c_void)
+    }
 }
 
 // glPixelStorei
 pub fn pixel_store_i(parameter: GLenum, value: u32) {
-	unsafe {
-		gll::PixelStorei(parameter, value as GLint)
-	}
+    unsafe {
+        gll::PixelStorei(parameter, value as GLint)
+    }
 }
 
 // glTexParameteri
 pub fn tex_parameter_i(target: GLenum, parameter: GLenum, value: u32) {
-	unsafe {
-		gll::TexParameteri(target, parameter, value as GLint)
-	}
+    unsafe {
+        gll::TexParameteri(target, parameter, value as GLint)
+    }
 }
 
 pub fn tex_parameter_f(target: GLenum, parameter: GLenum, value: f32) {
-	unsafe {
-		gll::TexParameterf(target, parameter, value)
-	}
+    unsafe {
+        gll::TexParameterf(target, parameter, value)
+    }
 }
 
 unsafe fn str_to_cstr(string: String) -> CString {
-	CString::new(string).unwrap()
+    CString::new(string).unwrap()
 }
 
 
 fn u32_to_enum(bits: u32) -> GLenum {
-	GLenum::from(bits)
+    GLenum::from(bits)
 }
 
 

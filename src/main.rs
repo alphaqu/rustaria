@@ -28,10 +28,11 @@ fn run_rustaria() {
 	client.join_world(world);
 
 	println!("Launching Rustaria. This is gonna be rusty.");
-	// yyour mom let mut world_gen = terraria_gen::WorldGen::new(893, 1743);
+	// yyour mom let mutd worldd_gen = terraria_gen::WorldGen::new(893, 1743);
 	// world_gen.generate_te rrain();
 
 	loop {
+		
 		client.draw();
 		client.tick();
 	}

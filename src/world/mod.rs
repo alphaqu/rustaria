@@ -17,7 +17,7 @@ pub mod tick;
 pub mod neighbor;
 
 // un hard code this
-const RENDER_DISTANCE: i32 = 32;
+const RENDER_DISTANCE: i32 = 4;
 
 pub struct World {
 	players: HashMap<PlayerId, Player>,

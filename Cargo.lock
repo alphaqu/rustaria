@@ -482,6 +482,9 @@ dependencies = [
 [[package]]
 name = "opengl-raw"
 version = "0.1.0"
+dependencies = [
+ "gl_generator",
+]
 
 [[package]]
 name = "png"
@@ -580,7 +583,6 @@ name = "rustaria"
 version = "0.1.0"
 dependencies = [
  "crossbeam",
- "gl_generator",
  "glam",
  "glfw",
  "image 0.23.14",

@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 
 in  vec2 outTexCoord;
 out vec4 fragColor;

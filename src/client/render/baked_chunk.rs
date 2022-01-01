@@ -4,7 +4,8 @@ use crate::client::render::world_renderer::NeighborImageLocation;
 use crate::client::opengl::builder::{QuadBuilder, QuadDepthBuilder};
 use crate::client::opengl::gl;
 use crate::client::opengl::gl::{BufferUsage, VertexDivisor};
-use crate::client::opengl::hlgl::{Atlas, ImageId, VertexLayout};
+use crate::client::opengl::hlgl::{Atlas, ImageId};
+use crate::client::opengl::sgl::{Program, VertexData};
 use crate::client::viewport::Viewport;
 use crate::misc::pos::ChunkPos;
 use crate::misc::util::CHUNK_SIZE;
@@ -14,12 +15,13 @@ use crate::world::{Grid, tile, wall};
 use crate::world::wall::Wall;
 
 pub struct BakedChunk {
-	layout: VertexLayout,
+	layout: VertexData,
 	vertices: u32,
 }
 
 impl BakedChunk {
 	pub fn new(
+		program: &Program,
 		viewport: &Viewport,
 		world: &World,
 		pos: &ChunkPos,
@@ -57,7 +59,7 @@ impl BakedChunk {
 			}
 
 			Self {
-				layout: builder.export(),
+				layout: builder.export(program),
 				vertices,
 			}
 		})
@@ -179,14 +181,14 @@ impl ChunkVertexBuilder {
 
 		// Add stuff
 		let y1 = (height) * self.gl_tile_height;
-		self.pos.add_quad(gl_pos.sub(Vec2::new(0f32, y1)), Vec2::new(width * self.gl_tile_width, -y1), 0f32);
+		self.pos.add_quad(gl_pos.sub(Vec2::new(0f32, y1)), Vec2::new(width * self.gl_tile_width, -y1), 0.5f32);
 		self.textures.add_quad(image_pos.add(image_offset), image_size);
 	}
 
-	pub fn export(self) -> VertexLayout {
-		let mut layout = VertexLayout::new(2);
-		layout.add_vbo(0, self.pos,      BufferUsage::StaticDraw, VertexDivisor::Vertex);
-		layout.add_vbo(1, self.textures, BufferUsage::StaticDraw, VertexDivisor::Vertex);
+	pub fn export(self, program: &Program) -> VertexData {
+		let mut layout = VertexData::new(2);
+		layout.add_vertex_array(&program.get_attribute("in_Position"), self.pos,      BufferUsage::StaticDraw, VertexDivisor::Vertex);
+		layout.add_vertex_array(&program.get_attribute("in_TextureCoord"), self.textures, BufferUsage::StaticDraw, VertexDivisor::Vertex);
 		layout
 	}
 }
