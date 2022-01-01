@@ -1,12 +1,11 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add};
 
-use glam::{IVec2, UVec2, Vec2, XY};
+use glam::{IVec2, UVec2, Vec2};
 use glam::{IVec3, UVec3, Vec3};
 use glam::{IVec4, UVec4, Vec4};
 
 use crate::client::opengl::gl::DataType;
 
-pub enum ElementType {}
 
 
 //impl VertexBuilderTrait<Vec3A> for Vec<Vec3A> {
@@ -53,7 +52,6 @@ impl QuadBuilder<Vec2> for Vec<Vec2> {
 		self.push(pos.add(size));
 		self.push(pos);
 		self.push(pos.add(Vec2::new(size.x, 0f32)));
-
 		//let thing = Vec2::new(pos.x + size.x, pos.y - size.y);
 	 	//self.push(thing);
 	}

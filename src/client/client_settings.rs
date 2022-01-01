@@ -6,8 +6,8 @@ pub struct ClientSettings {
 impl ClientSettings {
 	pub fn new() -> Self {
 		Self {
-			zoom: 120f32,
-			render_distance: 4,
+			zoom: 1.1f32,
+			render_distance: 16,
 		}
 	}
 }

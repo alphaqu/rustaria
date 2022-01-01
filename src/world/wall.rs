@@ -1,6 +1,4 @@
-use crate::misc::util::Direction;
 use crate::world::neighbor::{NeighborAware, NeighborMatrix, NeighborType};
-use crate::world::tile::Tile;
 use crate::world::wall;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -15,7 +13,7 @@ impl Wall {
 		Self {
 			variance: 0,
 			id: WallId { id: 0 },
-			matrix: NeighborMatrix::new(),
+			matrix: NeighborMatrix::default(),
 		}
 	}
 
@@ -23,7 +21,7 @@ impl Wall {
 		Self {
 			variance: 0,
 			id,
-			matrix: NeighborMatrix::new(),
+			matrix: NeighborMatrix::default(),
 		}
 	}
 

@@ -49,7 +49,7 @@ impl ControlHandler {
 						_ => panic!("what"),
 					};
 					let function = self.mappings.get(&mapping);
-					function.map(|func| {
+					if let Some(func) = function {
 						let event = &mut self.events[func.id as usize];
 						match action {
 							Action::Press => match event.event_type {
@@ -63,17 +63,14 @@ impl ControlHandler {
 									*pressed = true;
 								}
 							},
-							Action::Release => match event.event_type {
-								EventType::Persistent { ref mut pressed } => {
-									*pressed = false;
-								}
-								_ => {}
-							},
+							Action::Release => if let EventType::Persistent { ref mut pressed } = event.event_type {
+       									*pressed = false;
+       								},
 							// what the f*!# does this mean.
 							Action::Repeat => {
 							}
 						}
-					});
+					}
 				}
 				WindowEvent::CursorPos(x, y) => {
 					self.mouse_x = x;
@@ -96,10 +93,7 @@ impl ControlHandler {
 
 	pub fn finish(&mut self) {
 		for x in &mut self.events {
-			match x.event_type {
-				EventType::Request { ref mut requests } => *requests = 0,
-				_ => {}
-			}
+			if let EventType::Request { ref mut requests } = x.event_type { *requests = 0 }
 		}
 	}
 }
@@ -143,11 +137,6 @@ impl EventType {
 	pub fn new_persistent() -> EventType {
 		EventType::Persistent { pressed: false }
 	}
-}
-
-pub struct ControlMetadata {
-	mouse_x: i32,
-	mouse_y: i32,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]

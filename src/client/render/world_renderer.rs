@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fs::read_dir;
 use std::path::Path;
 
-use glam::Vec2;
 use glfw::Key;
 
 use crate::{Player, read_asset_string};
@@ -98,6 +97,7 @@ impl WorldRenderer {
             }
         }
     }
+
     pub fn tick(
         &mut self,
         world: &World,
@@ -108,7 +108,7 @@ impl WorldRenderer {
         let player_pos = ChunkPos::from_player(player);
         let render_distance = settings.render_distance as i32;
 
-        let mut lookup_pos = player_pos.clone();
+        let mut lookup_pos = player_pos;
         for y in -render_distance..render_distance {
             let chunk_y: i32 = player_pos.y as i32 + y;
             if chunk_y < 0 {
@@ -121,25 +121,18 @@ impl WorldRenderer {
                 if !self.baked_chunks.contains_key(&lookup_pos) {
                     let pos1 = &lookup_pos;
                     if let Some(baked_chunk) = BakedChunk::new(&self.program, viewport, world, pos1, &self.atlas) {
-                        self.baked_chunks.insert(lookup_pos.clone(), baked_chunk);
+                        self.baked_chunks.insert(lookup_pos, baked_chunk);
                     }
                 }
             }
         }
-
-        self.baked_chunks.retain(|pos, _baked_chunk| {
-            (player_pos.y as i32 - pos.y as i32).abs() < (render_distance as i32)
-                && (player_pos.x as i32 - pos.x as i32).abs() < (render_distance as i32)
-        })
     }
 
     pub fn tile_change(&mut self, pos: &WorldPos) {
         let chunk_tile_pos = pos.get_chunk_sub_pos();
         for dir in Direction::iter() {
             if chunk_tile_pos.is_border(dir) {
-                pos.get_chunk_pos().shift(dir).map(|pos| {
-                    self.baked_chunks.remove(&pos);
-                });
+                if let Some(pos) = pos.get_chunk_pos().shift(dir) { self.baked_chunks.remove(&pos); }
             }
         }
         self.baked_chunks.remove(pos.get_chunk_pos());
@@ -147,7 +140,6 @@ impl WorldRenderer {
 
     pub fn draw(&self, viewport: &Viewport, player: &Player, settings: &ClientSettings) {
         self.program.bind();
-        self.atlas.bind();
         self.player_pos.apply((player.pos_x * viewport.gl_tile_width, player.pos_y * viewport.gl_tile_height));
         self.gl_zoom.apply(settings.zoom);
         self.texture_sampler.apply(Sampler2d::new(0));
@@ -167,7 +159,7 @@ impl WorldRenderer {
                 baked_chunk.draw(gl::TRIANGLES);
             }
         } else {
-            for (_pos, baked_chunk) in &self.baked_chunks {
+            for baked_chunk in self.baked_chunks.values() {
                 baked_chunk.draw(gl::TRIANGLES);
             }
         }

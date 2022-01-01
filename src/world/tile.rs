@@ -1,4 +1,4 @@
-use crate::misc::util::{CallbackResponse, Direction};
+use crate::misc::util::{CallbackResponse};
 use crate::world::neighbor::{NeighborAware, NeighborMatrix, NeighborType};
 use crate::world::tick::Tickable;
 use crate::world::tile;
@@ -15,7 +15,7 @@ impl Tile {
 		Self {
 			variance: 0,
 			id: TileId { id: 0 },
-			matrix: NeighborMatrix::new()
+			matrix: NeighborMatrix::default()
 		}
 	}
 
@@ -23,7 +23,7 @@ impl Tile {
 		Self {
 			id,
 			variance: 0,
-			matrix: NeighborMatrix::new()
+			matrix: NeighborMatrix::default()
 		}
 	}
 
@@ -58,8 +58,8 @@ macro_rules! pub_const_tile_id {
     };
 }
 
-/// https://terraria.fandom.com/wiki/Tile_IDs
-/// Tile ids
+// https://terraria.fandom.com/wiki/Tile_IDs
+// Tile ids
 pub_const_tile_id! {
     AIR 0;
     DIRT 1;

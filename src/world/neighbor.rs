@@ -1,6 +1,4 @@
-use std::ops::Deref;
 use crate::misc::util::Direction;
-use crate::world::tile::Tile;
 
 pub trait NeighborAware {
 	fn get_neighbor_matrix(&self) -> &NeighborMatrix;
@@ -16,8 +14,8 @@ pub struct NeighborMatrix {
 	right: NeighborType,
 }
 
-impl NeighborMatrix {
-	pub fn new() -> Self {
+impl Default for NeighborMatrix {
+	fn default() -> Self {
 		Self {
 			top: NeighborType::Air,
 			down: NeighborType::Air,
@@ -25,7 +23,9 @@ impl NeighborMatrix {
 			right: NeighborType::Air,
 		}
 	}
+}
 
+impl NeighborMatrix {
 	pub fn set_neighbor_type(&mut self, direction: Direction, neighbor_type: NeighborType) {
 		match direction {
 			Direction::Top => self.top = neighbor_type,
@@ -37,14 +37,15 @@ impl NeighborMatrix {
 
 	pub fn get_neighbor_type(&self, direction: Direction) -> NeighborType {
 		match direction {
-			Direction::Top => self.top.clone(),
-			Direction::Down => self.down.clone(),
-			Direction::Left => self.left.clone(),
-			Direction::Right => self.right.clone(),
+			Direction::Top => self.top,
+			Direction::Down => self.down,
+			Direction::Left => self.left,
+			Direction::Right => self.right,
 		}
 	}
 
 	/// Actually mutates the values. watch out!
+	/// # Safety idk
 	pub unsafe fn update_neighbor<C: NeighborAware>(source: &C, neighbor: &C, direction: Direction) {
 
 		unsafe {

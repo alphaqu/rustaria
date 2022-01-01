@@ -1,4 +1,4 @@
-use noise::{NoiseFn, OpenSimplex, Perlin, Seedable};
+use noise::{NoiseFn, Perlin, Seedable};
 
 pub const TERRAIN: NoiseLayer = NoiseLayer { octaves: 16, scale: 512.0 };
 pub const CAVE: NoiseLayer = NoiseLayer { octaves: 16, scale: 32.0 };
@@ -11,18 +11,8 @@ pub struct NoiseLayer {
     scale: f64,
 }
 
-impl NoiseLayer {
-    fn new(octaves: u8, scale: f64) -> NoiseLayer {
-        Self {
-            octaves,
-            scale,
-        }
-    }
-}
-
 #[derive(Copy, Clone)]
 pub struct NoiseGenerator {
-    seed: u64,
     perlin: Perlin,
 }
 
@@ -31,7 +21,6 @@ impl NoiseGenerator {
         let perlin = Perlin::new();
         perlin.set_seed(seed as u32);
         Self {
-            seed,
             perlin,
         }
     }
@@ -41,7 +30,8 @@ impl NoiseGenerator {
     }
 
     pub fn get_2d_range(&self, x: i32, y: u32, scale: u32, layer: NoiseLayer) -> f64 {
-        self.get_2d(x, y, layer) * scale as f64
+       // self.get_2d(x, y, layer) * scale as f64
+        0.5 * scale as f64
     }
 
     pub fn get_3d_range(&self, x: i32, y: u32, z: u32, scale: u32, layer: NoiseLayer) -> f64 {

@@ -1,5 +1,7 @@
 use crate::client::opengl::gl;
 
+const TILE_SCALE: f32 = 20.0;
+
 pub struct Viewport {
     pub width: i32,
     pub height: i32,
@@ -22,7 +24,7 @@ impl Viewport {
     }
 
     fn calc_tile_size(&mut self, width: i32, height: i32) {
-        self.gl_tile_width = (width as f32) / width as f32;
-        self.gl_tile_height = (width as f32) / height as f32;
+        self.gl_tile_width = 1f32 / TILE_SCALE;
+        self.gl_tile_height = ((width as f32) / height as f32) / TILE_SCALE;
     }
 }

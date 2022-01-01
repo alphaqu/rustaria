@@ -12,7 +12,6 @@ use crate::world::neighbor::{NeighborAware, NeighborMatrix};
 use crate::world::tile::Tile;
 use crate::world::wall::Wall;
 
-mod feature;
 mod gen_const;
 mod noise;
 
@@ -85,14 +84,8 @@ impl WorldGenerator {
     }
 
     fn gen_chunk(context: &Arc<GenerationContext>, pos: &ChunkPos) -> Chunk {
-        let mut chunk = Chunk::new();
-        //Self::generate_terrain(context, &mut chunk, pos);
-        for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_SIZE {
-                chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::STONE));
-            }
-        }
-
+        let mut chunk = Chunk::default();
+        Self::generate_terrain(context, &mut chunk, pos);
         chunk = Self::calc_internal_neighbors::<Wall, Chunk>(chunk);
         chunk = Self::calc_internal_neighbors::<Tile, Chunk>(chunk);
         chunk
@@ -126,9 +119,7 @@ impl WorldGenerator {
                     chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::ASH_BLOCK));
                 } else if tile_y < hell_ceiling_height_line as i32 {
                     // stuff
-                } else if tile_y < cave_height_line as i32 {
-                    chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::STONE));
-                } else if tile_y < cave_transition_height as i32 {
+                } else if tile_y < cave_height_line as i32 || tile_y < cave_transition_height as i32 {
                     chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::STONE));
                 } else if tile_y < terrain_height_line as i32 {
                     chunk.set(&ChunkSubPos::new(x as u8, y as u8), Tile::id(tile::DIRT));

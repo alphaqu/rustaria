@@ -89,6 +89,7 @@ impl BakedChunk {
 	}
 }
 
+
 pub struct ChunkVertexBuilder {
 	pos: Vec<Vec3>,
 	textures: Vec<Vec2>,
@@ -102,11 +103,11 @@ impl ChunkVertexBuilder {
 	pub fn new(viewport: &Viewport, chunk_pos: &ChunkPos) -> ChunkVertexBuilder {
 		Self {
 			pos: Vec::new(),
-			textures: Vec::new(),
 			gl_chunk_x: (chunk_pos.x as f32) * (viewport.gl_tile_width * CHUNK_SIZE as f32),
 			gl_chunk_y: (chunk_pos.y as f32) * (viewport.gl_tile_height * CHUNK_SIZE as f32),
 			gl_tile_width: viewport.gl_tile_width,
 			gl_tile_height: viewport.gl_tile_height,
+			textures: Vec::new()
 		}
 	}
 
@@ -148,46 +149,9 @@ impl ChunkVertexBuilder {
 		self.textures.add_quad(image_pos.add(image_offset), item_tile_size);
 	}
 
-	pub fn add_wall(&mut self, x: usize, y: usize, wall: &Wall, atlas: &Atlas, var: u64) {
-		// Tile type position of the sprite.
-		let ((w_x, w_y), (width, height)) = NeighborImageLocation::from(wall).get_wall_pos();
-		let image = atlas.get_image(ImageId::Wall(wall.get_id().clone()));
-		let image_pos = Vec2::new(image.x, image.y);
-
-		// - 0.5 is because of the wall texture
-		let gl_pos = Vec2::new(
-			self.gl_chunk_x + (((x as f32 - 0.5) + w_x) * self.gl_tile_width),
-			self.gl_chunk_y + (((y as f32 - 0.5) + w_y) * self.gl_tile_height),
-		);
-
-		// We have 3 variants. An entry of tiles is 2x2 but are stacked horizontally for every variant.
-		let variant_offset = (var % 3u64) as f32 * 2f32;
-
-		let item_tile_size = Vec2::new(
-			image.width / 6f32,
-			image.height / 2f32,
-		);
-
-		// Calculate the offset on the tile sprite.
-		let image_offset = Vec2::new(
-			(w_x as f32 + variant_offset) * item_tile_size.x,
-			(w_y as f32) * item_tile_size.y,
-		);
-
-		let image_size = Vec2::new(
-			item_tile_size.x * width,
-			item_tile_size.y * height,
-		);
-
-		// Add stuff
-		let y1 = (height) * self.gl_tile_height;
-		self.pos.add_quad(gl_pos.sub(Vec2::new(0f32, y1)), Vec2::new(width * self.gl_tile_width, -y1), 0.5f32);
-		self.textures.add_quad(image_pos.add(image_offset), image_size);
-	}
-
 	pub fn export(self, program: &Program) -> VertexData {
 		let mut layout = VertexData::new(2);
-		layout.add_vertex_array(&program.get_attribute("in_Position"), self.pos,      BufferUsage::StaticDraw, VertexDivisor::Vertex);
+		layout.add_vertex_array(&program.get_attribute("in_Position"), self.pos, BufferUsage::StaticDraw, VertexDivisor::Vertex);
 		layout.add_vertex_array(&program.get_attribute("in_TextureCoord"), self.textures, BufferUsage::StaticDraw, VertexDivisor::Vertex);
 		layout
 	}

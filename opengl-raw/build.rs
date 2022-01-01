@@ -7,7 +7,7 @@ use std::path::Path;
 use gl_generator::{Api, Fallbacks, GlobalGenerator, Profile, Registry};
 
 fn main() {
-    let path = Path::new(&"./src/raw_gl.rs");
+    let path = Path::new(&"./src/gll.rs");
     println!("DOING STUFF");
     if !path.exists() {
         let mut file = File::create(&path).unwrap();

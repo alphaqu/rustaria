@@ -1,20 +1,20 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::cmp::Ordering;
+
 use std::collections::{BTreeMap, HashMap};
-use std::iter::Map;
+
 use std::path::Path;
 
-use image::{ColorType, DynamicImage, GenericImage, GenericImageView, ImageBuffer};
+use image::{DynamicImage, GenericImageView};
 use image::imageops::FilterType;
 use opengl_raw::gll::types::{GLenum, GLuint};
 use rectangle_pack::{contains_smallest_box, GroupedRectsToPlace, pack_rects, RectanglePackError, RectanglePackOk, RectToInsert, TargetBin, volume_heuristic};
 
-use crate::client::opengl::builder::VertexBuilderTrait;
+
 // use crate::client::opengl::gl;
 use crate::client::opengl::gl::{
-    self, BufferType, BufferUsage, DataType, VertexDivisor,
+    self, DataType,
 };
 use crate::client::opengl::gl_type::GlType;
 use crate::client::opengl::sgl::{Uniform, UniformType};

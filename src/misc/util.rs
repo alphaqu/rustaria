@@ -1,8 +1,6 @@
 use std::ops::Deref;
 use std::slice::Iter;
 
-use crate::world::tile::Tile;
-
 pub const CHUNK_SIZE: usize = 24;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -24,15 +22,6 @@ pub enum Direction {
 	Left,
 	Right,
 }
-
-impl Deref for Direction {
-	type Target = ();
-
-	fn deref(&self) -> &Self::Target {
-		&self
-	}
-}
-
 
 impl Direction {
 	pub fn flip(&self) -> Direction {
@@ -108,8 +97,7 @@ impl Direction {
 		}
 	}
 
-	pub fn iter() -> Iter<'static, Direction> {
-		static DIRECTIONS: [Direction; 4] = [Direction::Top, Direction::Down, Direction::Left, Direction::Right];
-		DIRECTIONS.iter()
+	pub fn iter() -> [Direction; 4] {
+		[Direction::Top, Direction::Down, Direction::Left, Direction::Right]
 	}
 }
