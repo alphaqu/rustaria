@@ -1,16 +1,14 @@
 extern crate gl_generator;
 
-use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::ops::Add;
 use std::path::Path;
-use std::string::String;
 
 use gl_generator::{Api, Fallbacks, GlobalGenerator, Profile, Registry};
 
 fn main() {
-    let path = Path::new(&"./src/gll.rs");
+    let path = Path::new(&"./src/raw_gl.rs");
+    println!("DOING STUFF");
     if !path.exists() {
         let mut file = File::create(&path).unwrap();
 
@@ -20,6 +18,6 @@ fn main() {
             .unwrap();
 
 
-        file.write_all(bindings.as_ref());
+        file.write_all(bindings.as_ref()).unwrap();
     }
 }
