@@ -2,13 +2,8 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/profiler_macro/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/profiler_service/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
-      <excludeFolder url="file://$MODULE_DIR$/profiler_macro/Cargo/target" />
-      <excludeFolder url="file://$MODULE_DIR$/profiler_macro/target" />
-      <excludeFolder url="file://$MODULE_DIR$/profiler_service/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

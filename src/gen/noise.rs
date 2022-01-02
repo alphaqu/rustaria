@@ -29,7 +29,6 @@ impl NoiseGenerator {
         self.get_1d(x, layer) * scale as f64
     }
 
-    #[profiler_macro::profile]
     pub fn get_2d_range(&self, x: i32, y: u32, scale: u32, layer: NoiseLayer) -> f64 {
        // self.get_2d(x, y, layer) * scale as f64
         0.5 * scale as f64

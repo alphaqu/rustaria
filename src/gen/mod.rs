@@ -54,7 +54,6 @@ impl WorldGenerator {
         }
     }
 
-    #[profiler_macro::profile]
     pub fn add_chunk(&mut self, pos: &ChunkPos) {
         if !self.queue_chunks.contains(pos) {
             let dup_pos = pos.clone();
@@ -68,7 +67,6 @@ impl WorldGenerator {
         }
     }
 
-    #[profiler_macro::profile]
     pub fn generate_chunks(&mut self) -> Option<Vec<(ChunkPos, Chunk)>> {
         let result = self.receiver.try_recv();
         if result.is_err() {
@@ -85,7 +83,6 @@ impl WorldGenerator {
         }
     }
 
-    #[profiler_macro::profile]
     fn gen_chunk(context: &Arc<GenerationContext>, pos: &ChunkPos) -> Chunk {
         let mut chunk = Chunk::default();
         Self::generate_terrain(context, &mut chunk, pos);
@@ -94,7 +91,6 @@ impl WorldGenerator {
         chunk
     }
 
-    #[profiler_macro::profile]
     pub fn generate_terrain(context: &Arc<GenerationContext>, chunk: &mut Chunk, pos: &ChunkPos) {
         for x in 0..CHUNK_SIZE {
             let tile_x = (x as i32 + (pos.x as i32 * CHUNK_SIZE as i32)) as i32;

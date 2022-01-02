@@ -98,7 +98,7 @@ impl WorldRenderer {
         }
     }
 
-    pub fn tick_world_renderer(
+    pub fn tick(
         &mut self,
         world: &World,
         viewport: &Viewport,

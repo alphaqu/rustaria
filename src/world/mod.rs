@@ -63,44 +63,17 @@ impl World {
 		self.players.get_mut(id.id).expect("Could not find player")
 	}
 
-	#[profiler_macro::profile]
 	pub fn acquire_player(&self, id: &PlayerId) -> &Player {
-		let ret = self.players.get(id.id).expect("Could not find player");
-		ret
+		self.players.get(id.id).expect("Could not find player")
 	}
 
 
-	#[profiler_macro::profile]
-	pub fn tick_world(&mut self) {
-		self.tick_physics();
-		self.tick_chunks();
-		self.poll_chunks();
-	}
-
-	#[profiler_macro::profile]
-	fn poll_chunks(&mut self) {
-		if let Some(new_chunks) = self.chunk_generator.generate_chunks() {
-			self.add_chunks(new_chunks)
+	pub fn tick(&mut self) {
+		for player in &mut self.players {
+			player.pos_x += player.vel_x * player.speed;
+			player.pos_y += player.vel_y * player.speed;
 		}
-	}
 
-	#[profiler_macro::profile]
-	fn add_chunks(&mut self, new_chunks: Vec<(ChunkPos, Chunk)>) {
-		for (pos, chunk) in new_chunks {
-			self.chunks.insert(pos, chunk);
-			let chunk = self.chunks.get(&pos).unwrap();
-			self.update_borders::<Tile>(&pos, chunk);
-			self.update_borders::<Wall>(&pos, chunk);
-			for dir in Direction::iter() {
-				if let Some(neighbor) = pos.shift(dir) {
-					self.chunk_updates.insert(neighbor);
-				}
-			}
-		}
-	}
-
-	#[profiler_macro::profile]
-	fn tick_chunks(&mut self) {
 		for player in &self.players {
 			let lookup_pos = ChunkPos::from_player(player);
 
@@ -116,13 +89,18 @@ impl World {
 				}
 			}
 		}
-	}
 
-	#[profiler_macro::profile]
-	fn tick_physics(&mut self) {
-		for player in &mut self.players {
-			player.pos_x += player.vel_x * player.speed;
-			player.pos_y += player.vel_y * player.speed;
+
+		if let Some(new_chunks) = self.chunk_generator.generate_chunks() {
+			for (pos, chunk) in new_chunks {
+				self.chunks.insert(pos, chunk);
+				let chunk = self.chunks.get(&pos).unwrap();
+				self.update_borders::<Tile>(&pos, chunk);
+				self.update_borders::<Wall>(&pos, chunk);
+				for dir in Direction::iter() {
+					if let Some(neighbor) = pos.shift(dir) { self.chunk_updates.insert(neighbor); }
+				}
+			}
 		}
 	}
 
@@ -160,6 +138,7 @@ impl World {
 		}
 	}
 
+
 	pub fn get<C: NeighborAware>(&self, pos: &WorldPos) -> Option<&C> where Chunk: Grid<C> {
 		self.chunks.get(pos.get_chunk_pos()).map(|chunk| {
 			chunk.get(pos.get_chunk_sub_pos())
@@ -183,7 +162,6 @@ impl World {
 	}
 
 
-	#[profiler_macro::profile]
 	fn update_neighbor<C: NeighborAware>(&mut self, pos: &WorldPos, object: &mut C) where Chunk: Grid<C> {
 		for i in Direction::iter() {
 			if let Some(neighbor_pos) = pos.shift(i) {
